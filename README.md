@@ -30,11 +30,15 @@ AI browser agent — which you can watch, pause and take over — to help comple
 * **Sync jobs** (Phase 2, step 2): downloads matching emails (first sync: last 30 days; then only new ones),
   extracts every job with AI, validates links against the email, removes tracking parameters and de-duplicates.
   Runs automatically (default every 30 minutes) and from the **Sync jobs** button, with live progress over SignalR.
+  Downloads 5 emails and extracts 4 at a time (`Sync:DownloadConcurrency`, `Sync:ExtractionConcurrency`); links are
+  sent to the model as short references (`[L3]`) instead of long tracking URLs, which keeps prompts small and fast.
+* **Activity log** (Jobs → Activity): a live, plain-text view of what the background sync is doing — searching,
+  downloading, each email's result and timing, AI errors, and the final summary (last 500 lines, kept in memory).
 * **Settings → AI model**: choose the provider (Anthropic, OpenAI, or an OpenAI-compatible endpoint such as Ollama,
   OpenRouter, Groq, Mistral or Gemini), any model id and the API key (stored encrypted); **Test model** checks it.
 * **Settings → Sample data**: remove the development demo jobs once real jobs arrive.
-* Automated tests: 117 .NET tests (domain, services on real SQLite, Gmail connection and sync, URL canonicalisation, de-duplication, the Agent Framework extractor against a scripted model, HTTP integration) and
-  40 Angular tests (API clients, signal store, details panel, split resizer, Gmail and AI settings, sync status, helpers).
+* Automated tests: 123 .NET tests (domain, services on real SQLite, Gmail connection and sync, URL canonicalisation, de-duplication, the Agent Framework extractor against a scripted model, HTTP integration) and
+  43 Angular tests (API clients, signal store, details panel, split resizer, Gmail and AI settings, sync status, activity log, helpers).
 
 ## Prerequisites
 
@@ -91,6 +95,8 @@ cd web && npx ng test --watch=false # frontend
 | `Gmail:RedirectUri` | `http://localhost:5080/api/settings/gmail/callback` | OAuth redirect; must match the Google OAuth client |
 | `Gmail:FrontendUrl` | `http://localhost:4200` | Where the browser returns after Google sign-in |
 | `DataProtection:KeysPath` | `App_Data/keys` | Encryption keys for stored secrets (keep private, back up with the database) |
+| `Sync:DownloadConcurrency` | `5` | Emails downloaded from Gmail in parallel |
+| `Sync:ExtractionConcurrency` | `4` | Emails sent to the AI model in parallel (lower it if the provider rate-limits) |
 | `Cors:AllowedOrigins` | `["http://localhost:4200"]` | Origins allowed to call the API directly |
 
 To start with an empty database (e.g. before connecting Gmail in Phase 2), set `Database:SeedSampleData` to `false`
@@ -152,6 +158,7 @@ dotnet ef migrations add <Name> \
 | GET / DELETE | `/api/settings/sample-data` | Count / remove development sample data |
 | POST | `/api/sync` | Start a sync in the background (`202`, or `409` if one is running) |
 | GET | `/api/sync/status` | Latest sync status |
+| GET | `/api/sync/log` | Recent activity-log lines (also pushed live as `syncLog`) |
 | WS | `/hubs/sync` | SignalR hub pushing `syncStatus` events |
 
 Errors use RFC 7807 problem details (`404` unknown id, `400` invalid input, `409` conflicts with current state, `502` Google API failures).

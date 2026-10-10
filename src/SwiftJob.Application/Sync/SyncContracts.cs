@@ -21,12 +21,30 @@ public sealed record SyncStatusDto(
     public static SyncStatusDto Idle { get; } = new(SyncState.Idle, "Not synced yet in this session.", 0, 0, 0, null, null);
 }
 
-/// <summary>Publishes progress (e.g. over SignalR) and remembers the latest status.</summary>
+public enum SyncLogLevel
+{
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+}
+
+/// <summary>One line of the user-visible activity log (what the background sync is doing).</summary>
+public sealed record SyncLogEntry(long Id, DateTime Timestamp, SyncLogLevel Level, string Message);
+
+/// <summary>
+/// Publishes progress and activity (e.g. over SignalR) and remembers the latest status and the most
+/// recent log lines (kept in memory; cleared when the API restarts).
+/// </summary>
 public interface ISyncStatusPublisher
 {
     SyncStatusDto Current { get; }
 
+    IReadOnlyList<SyncLogEntry> RecentLog { get; }
+
     Task PublishAsync(SyncStatusDto status, CancellationToken cancellationToken);
+
+    /// <summary>Adds a line to the activity log. Never throws; safe to call from parallel work.</summary>
+    Task LogAsync(SyncLogLevel level, string message);
 }
 
 /// <summary>Queues a synchronisation to run in the background.</summary>

@@ -6,6 +6,14 @@
         <p class="subtitle">Job opportunities extracted from your notification emails.</p>
       </div>
       <div class="header-actions">
+        <button
+          mat-stroked-button
+          (click)="toggleActivity()"
+          [class.active-toggle]="showActivity()"
+          [attr.aria-pressed]="showActivity()"
+        >
+          <mat-icon>receipt_long</mat-icon> Activity
+        </button>
         <button mat-stroked-button (click)="refresh()" [disabled]="store.jobs.isLoading()">
           <mat-icon>refresh</mat-icon> Refresh
         </button>
@@ -30,6 +38,10 @@
           <span>{{ st.message }}</span>
         </div>
       }
+    }
+
+    @if (showActivity()) {
+      <app-activity-log (closed)="toggleActivity()" />
     }
 
     <app-job-filters

@@ -8,6 +8,7 @@ using SwiftJob.Application.Abstractions;
 using SwiftJob.Application.Ai;
 using SwiftJob.Application.Extraction;
 using SwiftJob.Application.Gmail;
+using SwiftJob.Application.Sync;
 using SwiftJob.Infrastructure.Ai;
 using SwiftJob.Infrastructure.Gmail;
 using SwiftJob.Infrastructure.Persistence;
@@ -63,6 +64,7 @@ public static class DependencyInjection
     {
         services.AddMemoryCache();
         services.Configure<GmailOptions>(configuration.GetSection(GmailOptions.SectionName));
+        services.Configure<SyncOptions>(configuration.GetSection(SyncOptions.SectionName));
         services.AddSingleton<IOAuthStateStore, MemoryOAuthStateStore>();
         services.AddSingleton<GoogleGmailClient>();
         services.AddSingleton<IGmailOAuthClient>(sp => sp.GetRequiredService<GoogleGmailClient>());

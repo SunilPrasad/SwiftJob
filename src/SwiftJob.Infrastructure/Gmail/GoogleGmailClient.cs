@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using Google;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
@@ -116,15 +119,43 @@ internal sealed class GoogleGmailClient : IGmailOAuthClient, IGmailMailbox
             return GmailMessageParser.Parse(await get.ExecuteAsync(cancellationToken));
         });
 
-    private static async Task<T> CallAsync<T>(GmailAccess access, Func<GmailService, Task<T>> call)
+    /// <summary>
+    /// One Gmail service per account, reused across calls: the credential keeps its access token until it
+    /// expires (instead of refreshing it on every request) and the HTTP connection is reused.
+    /// GmailService and UserCredential are thread-safe.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, GmailService> _services = new();
+
+    private GmailService ServiceFor(GmailAccess access)
     {
-        var flow = CreateFlow(access.Client);
-        var credential = new UserCredential(flow, UserId, new TokenResponse { RefreshToken = access.RefreshToken });
-        using var service = new GmailService(new BaseClientService.Initializer
+        var key = Convert.ToHexString(SHA256.HashData(
+            Encoding.UTF8.GetBytes($"{access.Client.ClientId}\n{access.Client.ClientSecret}\n{access.RefreshToken}")));
+        if (_services.TryGetValue(key, out var existing))
+        {
+            return existing;
+        }
+
+        // Only one account is used at a time; drop services for old credentials (e.g. after reconnecting).
+        foreach (var (oldKey, old) in _services)
+        {
+            if (_services.TryRemove(oldKey, out _))
+            {
+                old.Dispose();
+            }
+        }
+
+        var credential = new UserCredential(CreateFlow(access.Client), UserId, new TokenResponse { RefreshToken = access.RefreshToken });
+        var service = new GmailService(new BaseClientService.Initializer
         {
             HttpClientInitializer = credential,
             ApplicationName = ApplicationName,
         });
+        return _services.GetOrAdd(key, service);
+    }
+
+    private async Task<T> CallAsync<T>(GmailAccess access, Func<GmailService, Task<T>> call)
+    {
+        var service = ServiceFor(access);
 
         try
         {

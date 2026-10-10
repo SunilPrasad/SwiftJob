@@ -9,3 +9,13 @@ export interface SyncStatus {
   startedAt: string | null;
   completedAt: string | null;
 }
+
+export type SyncLogLevel = 'Info' | 'Warning' | 'Error';
+
+/** One line of the background activity log. */
+export interface SyncLogEntry {
+  id: number;
+  timestamp: string;
+  level: SyncLogLevel;
+  message: string;
+}

@@ -12,6 +12,7 @@ namespace SwiftJob.Api.Sync;
 /// </summary>
 internal sealed class GmailSyncWorker(
     IServiceScopeFactory scopeFactory,
+    ISyncStatusPublisher status,
     TimeProvider timeProvider,
     ILogger<GmailSyncWorker> logger) : BackgroundService, ISyncTrigger
 {
@@ -43,6 +44,11 @@ internal sealed class GmailSyncWorker(
             var manual = _requests.Reader.TryRead(out _);
             if (manual || await IsScheduledSyncDueAsync(stoppingToken))
             {
+                if (!manual)
+                {
+                    await status.LogAsync(SyncLogLevel.Info, "Automatic sync starting.");
+                }
+
                 await RunOnceAsync(stoppingToken);
                 continue;
             }

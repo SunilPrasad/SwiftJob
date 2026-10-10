@@ -74,9 +74,9 @@ public sealed class JobImporter(IAppDbContext db, TimeProvider timeProvider)
             return null;
         }
 
-        // Only accept a URL that actually appears in the email: prevents fabricated or injected links.
-        var applicationUrl = Clean(extracted.ApplicationUrl, 2048);
-        if (applicationUrl is not null && !content.Links.Contains(applicationUrl, StringComparer.Ordinal))
+        // Only accept a link that actually appears in the email: prevents fabricated or injected links.
+        var applicationUrl = content.ResolveLink(extracted.ApplicationUrl);
+        if (applicationUrl is { Length: > 2048 })
         {
             applicationUrl = null;
         }

@@ -93,3 +93,16 @@
     transform: rotate(360deg);
   }
 }
+
+.header-actions {
+  flex-wrap: wrap;
+}
+
+.active-toggle {
+  background: var(--mat-sys-secondary-container);
+}
+
+/* The list column scrolls as a whole; its blocks keep their natural height. */
+.list > * {
+  flex-shrink: 0;
+}

@@ -97,6 +97,9 @@ Legend: `[x]` done · `[ ]` to do
 - [x] SignalR live progress (downloading / extracting n of m) and completion notification; dashboard refreshes
 - [x] Failed emails retried up to 3 times; extraction pauses after 3 consecutive AI errors; Gmail/AI errors shown in Settings
 - [x] Remove sample data from Settings; sample data no longer seeded by default
+- [x] Faster sync: parallel downloads (5) and AI extraction (4), one reused Google connection, links sent as short `[Ln]` references, shorter AI answers
+- [x] Background-sync fix: no retry loop after failures (5-minute back-off); every failure recorded and shown
+- [x] Activity log on the Jobs page: live view of each sync step, per-email result and timing, warnings and errors
 - [x] Tests: URL canonicalisation, source detection, email text/link extraction, importer/dedup, sync idempotency and retries, Gmail parser, AI settings, Agent Framework extractor with a scripted model, API endpoints, Angular AI settings and sync status
 
 ## Phase 3 — Candidate Profile

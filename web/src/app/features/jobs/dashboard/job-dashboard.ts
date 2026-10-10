@@ -18,6 +18,7 @@ import { Router } from '@angular/router';
 import { finalize, map } from 'rxjs';
 import { JOB_STATUS_LABELS, JobListItem, JobStatus } from '../../../core/models/job';
 import { SyncStatusService } from '../../../core/realtime/sync-status';
+import { ActivityLog } from '../../activity/activity-log';
 import { SplitResizer } from '../../../shared/split-resizer';
 import { JobsStore } from '../data/jobs-store';
 import { JobDetailsPanel } from '../details/job-details-panel';
@@ -40,6 +41,7 @@ import {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    ActivityLog,
     JobDetailsPanel,
     JobFilters,
     JobTable,
@@ -55,6 +57,7 @@ export class JobDashboard {
   private readonly router = inject(Router);
   protected readonly sync = inject(SyncStatusService);
   protected readonly syncRequested = signal(false);
+  protected readonly showActivity = signal(readActivityPreference());
 
   /** On phones there is no room to split: the details replace the list. */
   protected readonly isHandset = toSignal(
@@ -145,8 +148,18 @@ export class JobDashboard {
     });
   }
 
+  protected toggleActivity(): void {
+    this.showActivity.update((v) => !v);
+    try {
+      localStorage.setItem(ACTIVITY_KEY, String(this.showActivity()));
+    } catch {
+      // Preference simply isn't remembered.
+    }
+  }
+
   protected syncJobs(): void {
     this.syncRequested.set(true);
+    this.showActivity.set(true); // show what happens
     // Failures (e.g. Gmail not connected) are reported by apiErrorInterceptor.
     this.sync
       .start()
@@ -156,5 +169,15 @@ export class JobDashboard {
 
   protected refresh(): void {
     this.store.refresh();
+  }
+}
+
+const ACTIVITY_KEY = 'swiftjob.showActivity';
+
+function readActivityPreference(): boolean {
+  try {
+    return localStorage.getItem(ACTIVITY_KEY) === 'true';
+  } catch {
+    return false;
   }
 }

@@ -44,7 +44,7 @@ public sealed class JobSyncServiceTests : IAsyncLifetime
     {
         await using var db = _database.CreateContext();
         var service = new JobSyncService(db, GmailService(db), _google, _ai, _extractor, new JobImporter(db, _database.Clock),
-            _publisher, _database.Clock, NullLogger<JobSyncService>.Instance);
+            _publisher, Options.Create(new SyncOptions()), _database.Clock, NullLogger<JobSyncService>.Instance);
         return await service.SyncAsync(default);
     }
 
@@ -151,8 +151,11 @@ public sealed class JobSyncServiceTests : IAsyncLifetime
 
         var result = await Sync();
 
-        Assert.Equal(JobSyncService.MaxConsecutiveFailures, _extractor.Calls);
         Assert.Contains("consecutive AI errors", result.Summary);
+        Assert.Equal(JobSyncService.MaxConsecutiveFailures, result.EmailsFailed);
+        // Calls already in flight may finish, but the rest are never started and wait for the next sync.
+        await using var db = _database.CreateContext();
+        Assert.True(await db.JobEmails.CountAsync(e => e.SyncStatus == EmailSyncStatus.Pending) >= 6 - new SyncOptions().ExtractionConcurrency);
     }
 
     [Fact]
@@ -218,27 +221,101 @@ public sealed class JobSyncServiceTests : IAsyncLifetime
         Assert.Contains("can no longer be decrypted", (await verify.GmailConnections.SingleAsync()).LastSyncError);
     }
 
+    [Fact]
+    public async Task Extraction_runs_in_parallel_but_every_email_is_recorded()
+    {
+        for (var i = 0; i < 12; i++)
+        {
+            AddMessage($"m{i}", $"Job {i}", hoursAgo: i + 1);
+        }
+
+        _extractor.Delay = TimeSpan.FromMilliseconds(50);
+
+        var result = await Sync();
+
+        Assert.Equal(12, result.NewJobs);
+        Assert.True(_extractor.MaxConcurrent > 1, "extraction should overlap");
+        Assert.True(_extractor.MaxConcurrent <= new SyncOptions().ExtractionConcurrency);
+        await using var db = _database.CreateContext();
+        Assert.All(await db.JobEmails.ToListAsync(), e => Assert.Equal(EmailSyncStatus.Processed, e.SyncStatus));
+    }
+
+    [Fact]
+    public async Task Activity_log_describes_each_step()
+    {
+        AddMessage("a", "3 new .NET jobs");
+        AddMessage("b", "Your application was received", hoursAgo: 2);
+        _extractor.NotAJob.Add("Your application was received");
+
+        await Sync();
+
+        var lines = _publisher.RecentLog.Select(l => l.Message).ToList();
+        Assert.Contains(lines, l => l.StartsWith("Sync started for me@example.com", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Found 2 matching emails: 2 new, 0 already imported", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Downloaded “3 new .NET jobs” from jobalerts-noreply@linkedin.com", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.Contains("with Anthropic/claude-opus-5-5 (4 at a time)", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("1 job found (1 new) in “3 new .NET jobs”", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Not a job email: “Your application was received”", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Sync finished in", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("key", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Activity_log_records_ai_errors()
+    {
+        AddMessage("a", "Job A");
+        _extractor.Fail = true;
+
+        await Sync();
+
+        Assert.Contains(_publisher.RecentLog, l => l.Level == SyncLogLevel.Error && l.Message.Contains("model unavailable"));
+    }
+
     private sealed class FakeExtractor : IJobExtractionService
     {
-        public int Calls { get; private set; }
+        private int _calls;
+        private int _concurrent;
+        private int _maxConcurrent;
+
+        public int Calls => _calls;
+        public int MaxConcurrent => _maxConcurrent;
         public bool Fail { get; set; }
+        public TimeSpan Delay { get; set; }
         public HashSet<string> NotAJob { get; } = [];
 
-        public Task<EmailExtractionResult> ExtractAsync(EmailContent email, CancellationToken cancellationToken)
+        public async Task<EmailExtractionResult> ExtractAsync(EmailContent email, CancellationToken cancellationToken)
         {
-            Calls++;
-            if (Fail)
+            Interlocked.Increment(ref _calls);
+            var now = Interlocked.Increment(ref _concurrent);
+            int seen;
+            while (now > (seen = _maxConcurrent) && Interlocked.CompareExchange(ref _maxConcurrent, now, seen) != seen)
             {
-                throw new ExternalServiceException("model unavailable");
             }
 
-            return Task.FromResult(NotAJob.Contains(email.Subject!)
-                ? new EmailExtractionResult(false, [])
-                : new EmailExtractionResult(true,
-                [
-                    new ExtractedJob(email.Subject!, "Company", null, null, null, null, null, WorkMode.Unknown,
-                        null, null, null, null),
-                ]));
+            try
+            {
+                if (Delay > TimeSpan.Zero)
+                {
+                    await Task.Delay(Delay, cancellationToken);
+                }
+
+                if (Fail)
+                {
+                    throw new ExternalServiceException("model unavailable");
+                }
+
+                return NotAJob.Contains(email.Subject!)
+                    ? new EmailExtractionResult(false, [])
+                    : new EmailExtractionResult(true,
+                    [
+                        new ExtractedJob(email.Subject!, "Company", null, null, null, null, null, WorkMode.Unknown,
+                            null, null, null, null),
+                    ]);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _concurrent);
+            }
         }
     }
 
@@ -254,7 +331,30 @@ public sealed class JobSyncServiceTests : IAsyncLifetime
 
     private sealed class RecordingPublisher : ISyncStatusPublisher
     {
+        private readonly List<SyncLogEntry> _log = [];
+
         public SyncStatusDto Current { get; private set; } = SyncStatusDto.Idle;
+
+        public IReadOnlyList<SyncLogEntry> RecentLog
+        {
+            get
+            {
+                lock (_log)
+                {
+                    return _log.ToList();
+                }
+            }
+        }
+
+        public Task LogAsync(SyncLogLevel level, string message)
+        {
+            lock (_log)
+            {
+                _log.Add(new SyncLogEntry(_log.Count + 1, DateTime.UtcNow, level, message));
+            }
+
+            return Task.CompletedTask;
+        }
 
         public Task PublishAsync(SyncStatusDto status, CancellationToken cancellationToken)
         {

@@ -14,12 +14,27 @@ namespace SwiftJob.Infrastructure.Ai;
 /// <summary>
 /// Extracts jobs with a Microsoft Agent Framework <see cref="ChatClientAgent"/> and structured output.
 /// The agent has no tools: email content is untrusted, so the model can only return data, never act.
+/// Thread-safe for concurrent calls: configuration is loaded once per scope (one sync) and the agent reused.
 /// </summary>
-internal sealed class AgentJobExtractionService(
-    IAiConfigurationSource configuration,
-    IAiChatClientFactory chatClientFactory,
-    ILoggerFactory loggerFactory) : IJobExtractionService
+internal sealed class AgentJobExtractionService : IJobExtractionService
 {
+    private readonly IAiChatClientFactory _chatClientFactory;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly Lazy<Task<(AiConnectionConfig Config, ChatClientAgent Agent)>> _agent;
+
+    public AgentJobExtractionService(
+        IAiConfigurationSource configuration, IAiChatClientFactory chatClientFactory, ILoggerFactory loggerFactory)
+    {
+        _chatClientFactory = chatClientFactory;
+        _loggerFactory = loggerFactory;
+        _agent = new(async () =>
+        {
+            // Not cancellable on purpose: the shared result must not depend on the first caller's token.
+            var config = await configuration.GetRequiredAsync(CancellationToken.None);
+            return (config, CreateAgent(config));
+        }, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
     internal const string Instructions = """
         You extract job opportunities from a single email for a personal job-application tracker.
 
@@ -34,24 +49,25 @@ internal sealed class AgentJobExtractionService(
         - An email can contain several jobs (job alert digests). Return each job separately, in the order shown.
         - Copy facts exactly as written. If a value is not explicitly stated, use null. Never guess or invent
           a company, salary, location, URL or requirement.
-        - applicationUrl must be copied character-for-character from a URL that appears in the email
-          (links are shown in square brackets after their text) and must be the link for that specific job. Prefer the link to
-          the job itself over generic links (unsubscribe, settings, search, company home page). If there is
-          no job-specific link, use null.
+        - Links in the email are shown as references in square brackets after their text, e.g.
+          "Senior .NET Developer [L3]". applicationUrl must be the reference (for example "L3") of the link for
+          that specific job. Prefer the link to the job itself over generic links (unsubscribe, settings,
+          search, company home page). If there is no job-specific link, use null. Never write a URL yourself.
         - salaryText is the salary exactly as written (e.g. "£70,000 - £85,000 per annum", "£550 per day").
           salaryMin/salaryMax are plain numbers only when the amounts are explicit; salaryCurrency is the
           ISO 4217 code only when the currency is explicit (e.g. "£" → GBP).
         - workMode is Remote, Hybrid or Onsite only when stated or unambiguous from the location text
           (e.g. "Remote", "Hybrid - 2 days in office"); otherwise Unknown.
-        - description: the job's summary text from the email (not invented). requirements: listed skills or
-          requirements if the email includes them, otherwise null.
+        - description: the job's summary text from the email (not invented), at most about 600 characters;
+          cut it short rather than paraphrase. requirements: listed skills or requirements if the email includes
+          them (at most about 600 characters), otherwise null.
+        - Be concise: return only the JSON result, with no commentary.
         - sourceName: the job board or recruitment agency that sent or published the job, if stated.
         """;
 
     public async Task<EmailExtractionResult> ExtractAsync(EmailContent email, CancellationToken cancellationToken)
     {
-        var config = await configuration.GetRequiredAsync(cancellationToken);
-        var agent = CreateAgent(config);
+        var (config, agent) = await _agent.Value.WaitAsync(cancellationToken);
 
         try
         {
@@ -68,14 +84,14 @@ internal sealed class AgentJobExtractionService(
     }
 
     private ChatClientAgent CreateAgent(AiConnectionConfig config) =>
-        new(chatClientFactory.Create(config),
+        new(_chatClientFactory.Create(config),
             new ChatClientAgentOptions
             {
                 Name = "JobEmailExtractor",
                 Description = "Extracts structured job opportunities from job notification emails.",
                 ChatOptions = new ChatOptions { Instructions = Instructions },
             },
-            loggerFactory);
+            _loggerFactory);
 
     internal static string BuildPrompt(EmailContent email)
     {
@@ -155,7 +171,7 @@ internal sealed class AgentJobExtractionService(
         [Description("Listed requirements or skills, or null.")]
         public string? Requirements { get; set; }
 
-        [Description("Job-specific URL copied exactly from the email, or null.")]
+        [Description("Reference of the job-specific link, such as L3, or null.")]
         public string? ApplicationUrl { get; set; }
 
         [Description("Job board or agency name if stated, or null.")]

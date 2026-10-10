@@ -5,8 +5,10 @@ using SwiftJob.Application.Emails;
 namespace SwiftJob.Application.Extraction;
 
 /// <summary>
-/// Builds the text sent to the extractor. Links are kept inline as <c>text [url]</c> because the
-/// application URL is usually only present as a hyperlink. Output is length-limited to control cost.
+/// Builds the text sent to the extractor. Every link is replaced by a short reference such as <c>[L3]</c>
+/// placed after its text, and the real URLs are kept in <see cref="EmailContent.Links"/> (L1 = first).
+/// Job-alert links carry hundreds of characters of tracking data, so references cut the prompt size
+/// (and therefore time and cost) dramatically while still letting the model point at the right link.
 /// </summary>
 public static partial class EmailTextBuilder
 {
@@ -15,22 +17,34 @@ public static partial class EmailTextBuilder
 
     public static EmailContent Build(string? subject, string? sender, DateTime receivedAt, string? bodyText, string? bodyHtml)
     {
-        string text;
         var links = new List<string>();
+        var references = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        string Reference(string url)
+        {
+            if (!references.TryGetValue(url, out var reference))
+            {
+                if (links.Count >= MaxLinks)
+                {
+                    return string.Empty;
+                }
+
+                links.Add(url);
+                reference = $"[L{links.Count}]";
+                references[url] = reference;
+            }
+
+            return reference;
+        }
+
+        string text;
         if (!string.IsNullOrWhiteSpace(bodyHtml))
         {
             var withLinks = Anchor().Replace(bodyHtml, m =>
             {
                 var href = WebUtility.HtmlDecode(m.Groups["href"].Value).Trim();
                 var label = HtmlText.ToPlainText(m.Groups["text"].Value);
-                if (!IsHttp(href))
-                {
-                    return label;
-                }
-
-                links.Add(href);
-                return string.IsNullOrWhiteSpace(label) ? $" [{href}] " : $" {label} [{href}] ";
+                return IsHttp(href) ? $" {label} {Reference(href)} " : label;
             });
             text = HtmlText.ToPlainText(withLinks);
         }
@@ -39,16 +53,20 @@ public static partial class EmailTextBuilder
             text = bodyText ?? string.Empty;
         }
 
-        // Plain-text bodies (and text-only links in HTML) carry bare URLs.
-        links.AddRange(BareUrl().Matches(text).Select(m => m.Value.TrimEnd('.', ',', ')', '>')));
+        // Plain-text bodies (and URLs written as text in HTML) carry bare URLs.
+        text = BareUrl().Replace(text, m =>
+        {
+            var url = m.Value.TrimEnd('.', ',', ')', '>');
+            var trailing = m.Value[url.Length..];
+            return IsHttp(url) ? Reference(url) + trailing : m.Value;
+        });
 
         if (text.Length > MaxTextLength)
         {
             text = text[..MaxTextLength] + "\n[... email truncated ...]";
         }
 
-        var distinctLinks = links.Where(IsHttp).Distinct(StringComparer.Ordinal).Take(MaxLinks).ToList();
-        return new EmailContent(subject, sender, receivedAt, text, distinctLinks);
+        return new EmailContent(subject, sender, receivedAt, text, links);
     }
 
     private static bool IsHttp(string url) =>
