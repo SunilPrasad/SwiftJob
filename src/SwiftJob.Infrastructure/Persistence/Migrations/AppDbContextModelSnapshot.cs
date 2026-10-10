@@ -576,6 +576,51 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
                     b.ToTable("JobEmailLinks", (string)null);
                 });
 
+            modelBuilder.Entity("SwiftJob.Domain.Settings.GmailConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ConnectedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConnectedEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GrantedScopes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedRefreshToken")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchQuery")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GmailConnections");
+                });
+
             modelBuilder.Entity("SwiftJob.Domain.Applications.ApplicationActivity", b =>
                 {
                     b.HasOne("SwiftJob.Domain.Applications.ApplicationSession", "ApplicationSession")

@@ -8,5 +8,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/jobs/dashboard/job-dashboard').then((m) => m.JobDashboard),
   },
+  {
+    path: 'settings',
+    title: 'Settings · SwiftJob',
+    loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: 'jobs' },
 ];

@@ -57,16 +57,30 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Untrusted content rendered as plain text; only http(s) links allowed
 
 ### Quality
-- [x] 36 backend tests (domain, services on real SQLite, constraints, HTTP integration)
-- [x] 29 frontend tests (API client, store, details panel, split resizer, helpers)
+- [x] Backend tests (domain, services on real SQLite, constraints, HTTP integration)
+- [x] Frontend tests (API client, store, details panel, split resizer, helpers)
 - [x] Manual end-to-end check in Chromium (desktop + mobile)
 - [x] GitHub Actions CI (build + tests for backend and frontend)
 - [x] README with setup and run instructions
 
 ## Phase 2 — Gmail Integration
-- [ ] Google Cloud OAuth setup guide (gmail.readonly scope)
-- [ ] OAuth 2.0 sign-in flow and secure token storage (Data Protection)
-- [ ] Gmail sync service (configurable query / labels / senders)
+### Step 1 — Connect Gmail (read-only) ✅
+- [x] Google Cloud OAuth setup guide (docs/GMAIL_SETUP.md + in-app guide)
+- [x] Settings page with Gmail card (navigation link)
+- [x] Save / change / remove Google OAuth Client ID + Secret from the Settings page
+- [x] Client secret and refresh token encrypted at rest (ASP.NET Core Data Protection, DPAPI on Windows); never returned to the browser
+- [x] OAuth 2.0 sign-in requesting only `gmail.readonly` (offline access, consent prompt)
+- [x] CSRF-protected, single-use, expiring OAuth `state`
+- [x] Granted scope verified: anything broader than read-only is rejected and revoked
+- [x] Connected account email shown; credentials locked while connected
+- [x] Disconnect revokes access at Google and deletes the token
+- [x] Test connection: estimated match count + latest matching emails
+- [x] Editable Gmail search query (default: LinkedIn, Indeed, Reed, Totaljobs, JobServe alerts + `label:jobs`), reset to default
+- [x] Clear errors for expired/revoked access, Google API errors and denied consent
+- [x] Tests: connection service (fakes for Google), auth URL, encryption, state store, API endpoints, Settings UI
+
+### Step 2 — Sync and extraction
+- [ ] Gmail sync service using the saved query
 - [ ] Idempotent storage of emails (Gmail message id)
 - [ ] Job extraction: deterministic hints for LinkedIn, Indeed, Reed, Totaljobs, JobServe, agencies
 - [ ] AI-assisted structured extraction (`IJobExtractionService`) with nulls for unknown fields

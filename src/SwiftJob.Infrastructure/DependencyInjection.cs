@@ -1,11 +1,15 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SwiftJob.Application.Abstractions;
+using SwiftJob.Application.Gmail;
+using SwiftJob.Infrastructure.Gmail;
 using SwiftJob.Infrastructure.Persistence;
 using SwiftJob.Infrastructure.Persistence.Seeding;
+using SwiftJob.Infrastructure.Security;
 
 namespace SwiftJob.Infrastructure;
 
@@ -28,7 +32,37 @@ public static class DependencyInjection
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<SampleDataSeeder>();
 
+        AddSecretProtection(services, configuration, contentRootPath);
+        AddGmail(services, configuration);
+
         return services;
+    }
+
+    private static void AddSecretProtection(IServiceCollection services, IConfiguration configuration, string contentRootPath)
+    {
+        var keysPath = Path.GetFullPath(Path.Combine(
+            contentRootPath, configuration["DataProtection:KeysPath"] ?? Path.Combine("App_Data", "keys")));
+        Directory.CreateDirectory(keysPath);
+
+        var dataProtection = services.AddDataProtection()
+            .SetApplicationName("SwiftJob")
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        if (OperatingSystem.IsWindows())
+        {
+            dataProtection.ProtectKeysWithDpapi();
+        }
+
+        services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+    }
+
+    private static void AddGmail(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddMemoryCache();
+        services.Configure<GmailOptions>(configuration.GetSection(GmailOptions.SectionName));
+        services.AddSingleton<IOAuthStateStore, MemoryOAuthStateStore>();
+        services.AddSingleton<GoogleGmailClient>();
+        services.AddSingleton<IGmailOAuthClient>(sp => sp.GetRequiredService<GoogleGmailClient>());
+        services.AddSingleton<IGmailMailbox>(sp => sp.GetRequiredService<GoogleGmailClient>());
     }
 
     /// <summary>Makes a relative SQLite file path absolute (relative to the content root) and ensures its folder exists.</summary>

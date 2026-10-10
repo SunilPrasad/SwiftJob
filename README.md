@@ -3,8 +3,9 @@
 SwiftJob reads job-notification emails, turns them into a searchable job list, and (in later phases) uses an
 AI browser agent — which you can watch, pause and take over — to help complete applications.
 
-> **Status: Phase 1 (Foundation) complete.** Gmail sync, profile management and the AI agent are planned for
-> Phases 2–5; their buttons are visible but disabled in the UI. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> **Status: Phase 1 (Foundation) complete; Phase 2 in progress — Gmail can be connected (read-only).**
+> Email synchronisation, profile management and the AI agent follow; their buttons are visible but disabled.
+> See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [TASKS.md](TASKS.md).
 
 ## What works in Phase 1
 
@@ -22,8 +23,11 @@ AI browser agent — which you can watch, pause and take over — to help comple
   * Details panel with salary, location, work mode, source, received date, description (original and,
     when present, enriched), requirements, job link and the original email(s) — viewable as plain text or opened in Gmail.
   * Responsive layout down to phone width.
-* Automated tests: 36 .NET tests (domain, services on real SQLite, constraints, HTTP integration) and
-  29 Angular tests (API client, signal store, details panel, split resizer, helpers).
+* **Settings → Gmail** (Phase 2, step 1): connect one Gmail account with **read-only** access using your own
+  Google OAuth client, test the connection, edit which emails are read (a Gmail search query) and disconnect.
+  Setup guide: [docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md).
+* Automated tests: 63 .NET tests (domain, services on real SQLite, constraints, Gmail connection, HTTP integration) and
+  33 Angular tests (API client, signal store, details panel, split resizer, Gmail settings, helpers).
 
 ## Prerequisites
 
@@ -77,14 +81,20 @@ cd web && npx ng test --watch=false # frontend
 | `ConnectionStrings:SwiftJob` | `Data Source=App_Data/swiftjob.db` | SQLite file; relative paths are resolved from the API project folder |
 | `Database:ApplyMigrationsOnStartup` | `true` | Apply pending EF Core migrations at startup |
 | `Database:SeedSampleData` | `false` (`true` in Development) | Seed sample jobs into an **empty** database only |
+| `Gmail:RedirectUri` | `http://localhost:5080/api/settings/gmail/callback` | OAuth redirect; must match the Google OAuth client |
+| `Gmail:FrontendUrl` | `http://localhost:4200` | Where the browser returns after Google sign-in |
+| `DataProtection:KeysPath` | `App_Data/keys` | Encryption keys for stored secrets (keep private, back up with the database) |
 | `Cors:AllowedOrigins` | `["http://localhost:4200"]` | Origins allowed to call the API directly |
 
 To start with an empty database (e.g. before connecting Gmail in Phase 2), set `Database:SeedSampleData` to `false`
 and delete `App_Data/swiftjob.db`.
 
-Secrets (Gmail OAuth client, AI API keys) arrive in later phases and will be read from
-[user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables — never from
-committed files or the frontend.
+The Gmail OAuth client secret and refresh token are entered in the Settings page and stored **encrypted** in the
+local database (ASP.NET Core Data Protection; keys in `App_Data/keys`, DPAPI-protected on Windows). They are never
+returned to the browser. AI API keys (later phases) will come from
+[user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables.
+
+The API listens on `localhost` only and has no login, as it is a single-user local tool. Do not expose it to a network.
 
 ## Database migrations
 
@@ -95,7 +105,7 @@ dotnet ef migrations add <Name> \
   --output-dir Persistence/Migrations
 ```
 
-## API (Phase 1)
+## API
 
 | Method | Route | Description |
 |--------|-------|-------------|
@@ -105,8 +115,15 @@ dotnet ef migrations add <Name> \
 | GET | `/api/jobs/{id}` | Job details with linked emails |
 | PUT | `/api/jobs/{id}/status` | Body `{ "status": "New" \| "Applied" \| "NotRelevant" }` |
 | GET | `/api/emails/{id}` | Original email as plain text |
+| GET | `/api/settings/gmail` | Gmail connection status, redirect URI, search query (never secrets) |
+| PUT / DELETE | `/api/settings/gmail/credentials` | Save (`{ clientId, clientSecret }`) or remove the Google OAuth client |
+| PUT | `/api/settings/gmail/search-query` | `{ searchQuery }` — which emails may be read |
+| POST | `/api/settings/gmail/connect` | Returns the Google sign-in URL (read-only scope) |
+| GET | `/api/settings/gmail/callback` | OAuth redirect target; returns the browser to Settings |
+| POST | `/api/settings/gmail/disconnect` | Revoke access and delete the stored token |
+| POST | `/api/settings/gmail/test` | Verify access; count and preview matching emails |
 
-Errors use RFC 7807 problem details (`404` for unknown ids, `400` for invalid input).
+Errors use RFC 7807 problem details (`404` unknown id, `400` invalid input, `409` conflicts with current state, `502` Google API failures).
 
 ## Project structure
 
@@ -118,5 +135,6 @@ src/SwiftJob.Api              ASP.NET Core host: controllers, error handling, co
 tests/SwiftJob.Tests          unit + integration tests
 web/                          Angular 22 application
 docs/ARCHITECTURE.md          architecture, technology evaluation, risks and phase plan
+docs/GMAIL_SETUP.md           step-by-step Google OAuth setup for Gmail
 TASKS.md                      progress checklist for all phases
 ```

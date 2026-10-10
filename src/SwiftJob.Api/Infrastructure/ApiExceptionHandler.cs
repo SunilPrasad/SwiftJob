@@ -14,12 +14,18 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
+            ConflictException => (StatusCodes.Status409Conflict, "Request conflicts with the current state"),
+            ExternalServiceException => (StatusCodes.Status502BadGateway, "External service error"),
             OperationCanceledException when httpContext.RequestAborted.IsCancellationRequested =>
                 (499, "Request cancelled"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred"),
         };
 
-        if (status == StatusCodes.Status500InternalServerError)
+        if (status == StatusCodes.Status502BadGateway)
+        {
+            logger.LogWarning(exception, "External service failure for {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
+        }
+        else if (status == StatusCodes.Status500InternalServerError)
         {
             logger.LogError(exception, "Unhandled exception for {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
         }

@@ -3,6 +3,7 @@ using SwiftJob.Domain.Applications;
 using SwiftJob.Domain.Candidates;
 using SwiftJob.Domain.Emails;
 using SwiftJob.Domain.Jobs;
+using SwiftJob.Domain.Settings;
 
 namespace SwiftJob.Application.Abstractions;
 
@@ -19,6 +20,7 @@ public interface IAppDbContext
     DbSet<ApplicationSession> ApplicationSessions { get; }
     DbSet<ApplicationActivity> ApplicationActivities { get; }
     DbSet<ApplicationAnswer> ApplicationAnswers { get; }
+    DbSet<GmailConnection> GmailConnections { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -140,6 +140,16 @@ Implementation approach:
 * External URLs are validated (scheme, host) before the agent navigates; tracking redirects are resolved without
   cookies, with a hop limit and timeouts.
 
+### Gmail connection (implemented)
+
+* Credentials: the user's own Google OAuth *Web application* client, entered in Settings and stored encrypted
+  (`ISecretProtector` → ASP.NET Core Data Protection, keys on disk outside the database).
+* Ports in `SwiftJob.Application/Gmail`: `IGmailOAuthClient`, `IGmailMailbox`, `IOAuthStateStore`;
+  `GmailConnectionService` holds the rules (state validation, read-only scope verification, revocation).
+  `GoogleGmailClient` (Infrastructure) is the only class that references the Google SDK.
+* Only `gmail.readonly` is requested; the granted scope is checked and broader grants are revoked.
+* One Gmail account per installation (`GmailConnection` row).
+
 ## 8. Evaluation: live browser viewing and control
 
 The critical requirement is that the user can watch the agent, pause it, take over (including CAPTCHA) and resume.

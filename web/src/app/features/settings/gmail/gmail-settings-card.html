@@ -1,0 +1,261 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-icon mat-card-avatar class="avatar">mail</mat-icon>
+    <mat-card-title>Gmail</mat-card-title>
+    <mat-card-subtitle>Read job notification emails from your Gmail account</mat-card-subtitle>
+  </mat-card-header>
+
+  <div class="progress-slot">
+    @if (busy() || settings.isLoading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  @if (settings.value(); as s) {
+    <mat-card-content>
+      <div class="status" [class]="'status ' + state()">
+        @switch (state()) {
+          @case ('connected') {
+            <mat-icon>check_circle</mat-icon>
+            <div>
+              <strong>Connected as {{ s.connectedEmail }}</strong>
+              <span class="muted"
+                >since {{ s.connectedAt | date: 'd MMM y, HH:mm' }} · read-only</span
+              >
+            </div>
+          }
+          @case ('ready') {
+            <mat-icon>link</mat-icon>
+            <div>
+              <strong>Ready to connect</strong>
+              <span class="muted"
+                >Google OAuth client saved. Connect your Gmail account to continue.</span
+              >
+            </div>
+          }
+          @default {
+            <mat-icon>settings</mat-icon>
+            <div>
+              <strong>Not set up</strong>
+              <span class="muted">Add your Google OAuth client to connect Gmail.</span>
+            </div>
+          }
+        }
+      </div>
+
+      <p class="readonly-note">
+        <mat-icon inline>lock</mat-icon>
+        SwiftJob asks Google only for <strong>read-only</strong> access
+        (<code>gmail.readonly</code>). It cannot send, delete, label or change any email. You can
+        revoke access at any time here or at
+        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer"
+          >myaccount.google.com/permissions</a
+        >.
+      </p>
+
+      <!-- Step 1: Google OAuth client -->
+      <section>
+        <h3>1. Google OAuth client</h3>
+
+        <mat-expansion-panel class="guide" [expanded]="state() === 'not-configured'">
+          <mat-expansion-panel-header>
+            <mat-panel-title
+              >How to create your Google OAuth client (one-time, ~10 minutes)</mat-panel-title
+            >
+          </mat-expansion-panel-header>
+          <ol>
+            <li>
+              Open
+              <a
+                href="https://console.cloud.google.com/projectcreate"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Google Cloud Console</a
+              >
+              and create a project (e.g. “SwiftJob”).
+            </li>
+            <li>
+              Enable the
+              <a
+                href="https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Gmail API</a
+              >
+              for the project.
+            </li>
+            <li>
+              Configure the <strong>OAuth consent screen</strong> (Google Auth Platform → Branding /
+              Audience): user type <em>External</em>, add your Gmail address as a
+              <em>test user</em>, and add the scope <code>.../auth/gmail.readonly</code> under Data
+              Access.
+            </li>
+            <li>
+              Create an <strong>OAuth client ID</strong> (Clients → Create client) of type
+              <em>Web application</em> and add this <em>Authorised redirect URI</em>:
+              <div class="copy-row">
+                <code class="uri">{{ s.redirectUri }}</code>
+                <button
+                  mat-icon-button
+                  matTooltip="Copy"
+                  aria-label="Copy redirect URI"
+                  (click)="copyRedirectUri(s.redirectUri)"
+                >
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+            </li>
+            <li>
+              Copy the <strong>Client ID</strong> and <strong>Client secret</strong> into the form
+              below.
+            </li>
+          </ol>
+          <p class="muted small">
+            Tip: while the app is in Google's “Testing” status, Google expires the connection after
+            7 days. To avoid reconnecting weekly, set the app to “In production” (Audience → Publish
+            app). For your own account the “unverified app” warning is expected — choose Advanced →
+            Continue. Full guide: docs/GMAIL_SETUP.md.
+          </p>
+        </mat-expansion-panel>
+
+        @if (showCredentialsForm()) {
+          <form class="form" [formGroup]="credentialsForm" (ngSubmit)="saveCredentials()">
+            <mat-form-field appearance="outline">
+              <mat-label>Client ID</mat-label>
+              <input
+                matInput
+                formControlName="clientId"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="1234567890-abc.apps.googleusercontent.com"
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Client secret</mat-label>
+              <input
+                matInput
+                type="password"
+                formControlName="clientSecret"
+                autocomplete="new-password"
+              />
+              <mat-hint>Stored encrypted on this computer. Never shown again.</mat-hint>
+            </mat-form-field>
+            <div class="actions">
+              <button mat-flat-button type="submit" [disabled]="busy()">Save client</button>
+              @if (editingCredentials()) {
+                <button mat-button type="button" (click)="editingCredentials.set(false)">
+                  Cancel
+                </button>
+              }
+            </div>
+          </form>
+        } @else {
+          <div class="saved-client">
+            <div>
+              <span class="muted small">Client ID</span>
+              <div class="mono">{{ s.clientId }}</div>
+              <span class="muted small">Client secret: saved (encrypted)</span>
+            </div>
+            @if (state() === 'ready') {
+              <div class="actions">
+                <button mat-button (click)="editCredentials(s)">
+                  <mat-icon>edit</mat-icon> Change
+                </button>
+                <button mat-button (click)="removeCredentials()">
+                  <mat-icon>delete</mat-icon> Remove
+                </button>
+              </div>
+            } @else {
+              <span class="muted small">Disconnect Gmail to change the client.</span>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Step 2: connect -->
+      <section>
+        <h3>2. Connect Gmail</h3>
+        @if (state() === 'connected') {
+          <div class="actions">
+            <button mat-flat-button (click)="test()" [disabled]="busy()">
+              <mat-icon>network_check</mat-icon> Test connection
+            </button>
+            <button mat-stroked-button (click)="disconnect()" [disabled]="busy()">
+              <mat-icon>link_off</mat-icon> Disconnect
+            </button>
+          </div>
+        } @else {
+          <p class="muted">
+            You'll be sent to Google to sign in and approve read-only access, then brought back
+            here.
+          </p>
+          <button mat-flat-button (click)="connect()" [disabled]="busy() || state() !== 'ready'">
+            <mat-icon>login</mat-icon> Connect Gmail (read-only)
+          </button>
+        }
+
+        @if (testResult(); as t) {
+          <div class="test-result" role="status">
+            <p>
+              <mat-icon inline class="ok">check_circle</mat-icon>
+              Connection works for <strong>{{ t.connectedEmail }}</strong
+              >. About <strong>{{ t.estimatedMatches }}</strong> email{{
+                t.estimatedMatches === 1 ? '' : 's'
+              }}
+              match the filter.
+            </p>
+            @if (t.latestMessages.length) {
+              <p class="muted small">Latest matching emails:</p>
+              <ul class="previews">
+                @for (m of t.latestMessages; track m.id) {
+                  <li>
+                    <span class="subject">{{ m.subject ?? '(no subject)' }}</span>
+                    <span class="muted small"
+                      >{{ m.from }} · {{ m.receivedAt | date: 'd MMM y' }}</span
+                    >
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="muted">No emails match the filter yet. Try adjusting it below.</p>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Step 3: filter -->
+      <section>
+        <h3>3. Which emails to read</h3>
+        <p class="muted small">
+          A Gmail search query, exactly as you would type it in Gmail's search box. Only matching
+          emails will be read.
+        </p>
+        <mat-form-field appearance="outline" class="query">
+          <mat-label>Gmail search query</mat-label>
+          <textarea matInput [formControl]="searchQuery" rows="3" spellcheck="false"></textarea>
+        </mat-form-field>
+        <div class="actions">
+          <button
+            mat-flat-button
+            (click)="saveQuery()"
+            [disabled]="busy() || searchQuery.invalid || searchQuery.value === s.searchQuery"
+          >
+            Save filter
+          </button>
+          <button
+            mat-button
+            (click)="resetQuery(s)"
+            [disabled]="searchQuery.value === s.defaultSearchQuery"
+          >
+            Reset to default
+          </button>
+        </div>
+      </section>
+    </mat-card-content>
+  } @else if (settings.error()) {
+    <mat-card-content>
+      <p class="muted">Settings could not be loaded.</p>
+      <button mat-button (click)="settings.reload()">Try again</button>
+    </mat-card-content>
+  }
+</mat-card>

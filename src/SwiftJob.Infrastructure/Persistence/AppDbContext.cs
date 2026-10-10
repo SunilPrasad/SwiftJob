@@ -4,6 +4,7 @@ using SwiftJob.Domain.Applications;
 using SwiftJob.Domain.Candidates;
 using SwiftJob.Domain.Emails;
 using SwiftJob.Domain.Jobs;
+using SwiftJob.Domain.Settings;
 
 namespace SwiftJob.Infrastructure.Persistence;
 
@@ -19,6 +20,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ApplicationSession> ApplicationSessions => Set<ApplicationSession>();
     public DbSet<ApplicationActivity> ApplicationActivities => Set<ApplicationActivity>();
     public DbSet<ApplicationAnswer> ApplicationAnswers => Set<ApplicationAnswer>();
+    public DbSet<GmailConnection> GmailConnections => Set<GmailConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

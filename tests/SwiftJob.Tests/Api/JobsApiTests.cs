@@ -105,6 +105,7 @@ public sealed class JobsApiTests : IClassFixture<JobsApiTests.ApiFactory>
             builder.UseSetting("ConnectionStrings:SwiftJob", $"Data Source={_databasePath};Pooling=False");
             builder.UseSetting("Database:ApplyMigrationsOnStartup", "true");
             builder.UseSetting("Database:SeedSampleData", "true");
+            builder.UseSetting("DataProtection:KeysPath", _databasePath + "-keys");
         }
 
         protected override void Dispose(bool disposing)
@@ -113,6 +114,11 @@ public sealed class JobsApiTests : IClassFixture<JobsApiTests.ApiFactory>
             foreach (var suffix in new[] { "", "-wal", "-shm" })
             {
                 File.Delete(_databasePath + suffix);
+            }
+
+            if (Directory.Exists(_databasePath + "-keys"))
+            {
+                Directory.Delete(_databasePath + "-keys", recursive: true);
             }
         }
     }
