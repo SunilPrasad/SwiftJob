@@ -79,19 +79,25 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Clear errors for expired/revoked access, Google API errors and denied consent
 - [x] Tests: connection service (fakes for Google), auth URL, encryption, state store, API endpoints, Settings UI
 
-### Step 2 — Sync and extraction
-- [ ] Gmail sync service using the saved query
-- [ ] Idempotent storage of emails (Gmail message id)
-- [ ] Job extraction: deterministic hints for LinkedIn, Indeed, Reed, Totaljobs, JobServe, agencies
-- [ ] AI-assisted structured extraction (`IJobExtractionService`) with nulls for unknown fields
-- [ ] Multiple jobs per email
-- [ ] Tracking-URL canonicalisation and safe redirect resolution
-- [ ] De-duplication (source job id, canonical URL, other reliable attributes)
-- [ ] Scheduled background sync (configurable interval)
-- [ ] Manual "Sync Jobs" button enabled
-- [ ] SignalR sync progress / new-job notifications
-- [ ] Retry policies and failed-email reprocessing
-- [ ] Tests for parsing, dedup and sync idempotency
+### Step 2 — Sync and extraction ✅
+- [x] Gmail sync using the saved query; first sync reads the last 30 days, later syncs only new emails (1-day overlap)
+- [x] Idempotent storage of emails (unique Gmail message id); full text + HTML bodies retained, attachments ignored
+- [x] AI extraction with **Microsoft Agent Framework** (`ChatClientAgent`, structured output) behind `IJobExtractionService`
+- [x] Provider-neutral AI: Anthropic, OpenAI, any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq, Mistral, Gemini…); no Azure AI Foundry
+- [x] Settings → AI model: provider, any model id, endpoint, encrypted API key, Test model
+- [x] Provider capability info supplied by the backend (key/endpoint requirements, suggested models, notes)
+- [x] Multiple jobs per email; nulls for anything not stated; non-job emails marked Ignored
+- [x] Prompt-injection safeguards: email passed as delimited untrusted data, agent has no tools, outputs validated
+- [x] Application links must appear in the email (fabricated/injected links discarded)
+- [x] Source detected from sender domain (LinkedIn, Indeed, Reed, Totaljobs, JobServe, agencies…)
+- [x] Tracking-URL canonicalisation without network calls (LinkedIn, Indeed, Reed, Totaljobs, JobServe, generic `utm_*` etc.)
+- [x] De-duplication: source job id → canonical URL → source + title + company within 21 days; later emails linked, missing fields filled, existing values never overwritten
+- [x] Scheduled background sync (toggle + interval in Settings, default 30 minutes)
+- [x] Manual **Sync jobs** button enabled
+- [x] SignalR live progress (downloading / extracting n of m) and completion notification; dashboard refreshes
+- [x] Failed emails retried up to 3 times; extraction pauses after 3 consecutive AI errors; Gmail/AI errors shown in Settings
+- [x] Remove sample data from Settings; sample data no longer seeded by default
+- [x] Tests: URL canonicalisation, source detection, email text/link extraction, importer/dedup, sync idempotency and retries, Gmail parser, AI settings, Agent Framework extractor with a scripted model, API endpoints, Angular AI settings and sync status
 
 ## Phase 3 — Candidate Profile
 - [ ] Profile API (personal, contact, summary, skills, work authorisation, preferences)
@@ -104,9 +110,9 @@ Legend: `[x]` done · `[ ]` to do
 ## Phase 4 — AI Application Prototype
 - [ ] Provider-neutral AI interfaces (`IFormUnderstandingService`, `IApplicationAnswerService`,
       `IApplicationAgent`, `IBrowserSessionService`, `IJobMatchingService`)
-- [ ] Provider configuration (provider, model, credentials via user secrets / env vars)
-- [ ] One working AI provider adapter (Microsoft.Extensions.AI)
-- [ ] Provider capability flags (structured output, vision, computer-use)
+- [x] Provider configuration (provider, model, credentials) — done in Phase 2 (Settings → AI model)
+- [x] Working AI provider adapters (Anthropic, OpenAI, OpenAI-compatible via Microsoft.Extensions.AI + Agent Framework)
+- [ ] Provider capability flags for browser work (vision, computer-use)
 - [ ] Playwright browser session service
 - [ ] Locally hosted sample multi-step job application form
 - [ ] Page inspection → field mapping → form filling

@@ -8,6 +8,11 @@ export interface GmailSettings {
   connectedAt: string | null;
   searchQuery: string;
   defaultSearchQuery: string;
+  autoSyncEnabled: boolean;
+  syncIntervalMinutes: number;
+  lastSyncCompletedAt: string | null;
+  lastSyncSummary: string | null;
+  lastSyncError: string | null;
 }
 
 export interface GmailMessagePreview {

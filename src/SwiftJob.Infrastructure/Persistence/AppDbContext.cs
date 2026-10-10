@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SwiftJob.Application.Abstractions;
+using SwiftJob.Domain.Ai;
 using SwiftJob.Domain.Applications;
 using SwiftJob.Domain.Candidates;
 using SwiftJob.Domain.Emails;
@@ -21,6 +22,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ApplicationActivity> ApplicationActivities => Set<ApplicationActivity>();
     public DbSet<ApplicationAnswer> ApplicationAnswers => Set<ApplicationAnswer>();
     public DbSet<GmailConnection> GmailConnections => Set<GmailConnection>();
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

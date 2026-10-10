@@ -3,8 +3,9 @@
 SwiftJob reads job-notification emails, turns them into a searchable job list, and (in later phases) uses an
 AI browser agent — which you can watch, pause and take over — to help complete applications.
 
-> **Status: Phase 1 (Foundation) complete; Phase 2 in progress — Gmail can be connected (read-only).**
-> Email synchronisation, profile management and the AI agent follow; their buttons are visible but disabled.
+> **Status: Phases 1 and 2 complete.** Gmail (read-only) is synchronised on a schedule or on demand and jobs
+> are extracted with AI (Microsoft Agent Framework; Anthropic, OpenAI or any OpenAI-compatible model).
+> Candidate profile (Phase 3) and the application agent (Phases 4–5) follow; Auto apply is visible but disabled.
 > See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [TASKS.md](TASKS.md).
 
 ## What works in Phase 1
@@ -26,8 +27,14 @@ AI browser agent — which you can watch, pause and take over — to help comple
 * **Settings → Gmail** (Phase 2, step 1): connect one Gmail account with **read-only** access using your own
   Google OAuth client, test the connection, edit which emails are read (a Gmail search query) and disconnect.
   Setup guide: [docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md).
-* Automated tests: 63 .NET tests (domain, services on real SQLite, constraints, Gmail connection, HTTP integration) and
-  33 Angular tests (API client, signal store, details panel, split resizer, Gmail settings, helpers).
+* **Sync jobs** (Phase 2, step 2): downloads matching emails (first sync: last 30 days; then only new ones),
+  extracts every job with AI, validates links against the email, removes tracking parameters and de-duplicates.
+  Runs automatically (default every 30 minutes) and from the **Sync jobs** button, with live progress over SignalR.
+* **Settings → AI model**: choose the provider (Anthropic, OpenAI, or an OpenAI-compatible endpoint such as Ollama,
+  OpenRouter, Groq, Mistral or Gemini), any model id and the API key (stored encrypted); **Test model** checks it.
+* **Settings → Sample data**: remove the development demo jobs once real jobs arrive.
+* Automated tests: 117 .NET tests (domain, services on real SQLite, Gmail connection and sync, URL canonicalisation, de-duplication, the Agent Framework extractor against a scripted model, HTTP integration) and
+  40 Angular tests (API clients, signal store, details panel, split resizer, Gmail and AI settings, sync status, helpers).
 
 ## Prerequisites
 
@@ -47,8 +54,8 @@ dotnet tool restore
 dotnet run --project src/SwiftJob.Api
 ```
 
-On first start in the Development environment the API creates the database, applies migrations and seeds the
-sample data. Useful URLs: `http://localhost:5080/health`, `http://localhost:5080/openapi/v1.json`.
+On first start the API creates the database and applies migrations. Sample data is no longer seeded by default
+(set `Database:SeedSampleData` to `true` for demo data). Useful URLs: `http://localhost:5080/health`, `http://localhost:5080/openapi/v1.json`.
 
 ```bash
 # 2. Frontend (http://localhost:4200) — in a second terminal
@@ -80,7 +87,7 @@ cd web && npx ng test --watch=false # frontend
 |-----|---------|-------------|
 | `ConnectionStrings:SwiftJob` | `Data Source=App_Data/swiftjob.db` | SQLite file; relative paths are resolved from the API project folder |
 | `Database:ApplyMigrationsOnStartup` | `true` | Apply pending EF Core migrations at startup |
-| `Database:SeedSampleData` | `false` (`true` in Development) | Seed sample jobs into an **empty** database only |
+| `Database:SeedSampleData` | `false` | Seed demo jobs into an **empty** database only |
 | `Gmail:RedirectUri` | `http://localhost:5080/api/settings/gmail/callback` | OAuth redirect; must match the Google OAuth client |
 | `Gmail:FrontendUrl` | `http://localhost:4200` | Where the browser returns after Google sign-in |
 | `DataProtection:KeysPath` | `App_Data/keys` | Encryption keys for stored secrets (keep private, back up with the database) |
@@ -89,12 +96,29 @@ cd web && npx ng test --watch=false # frontend
 To start with an empty database (e.g. before connecting Gmail in Phase 2), set `Database:SeedSampleData` to `false`
 and delete `App_Data/swiftjob.db`.
 
+The AI provider, model and API key are chosen in **Settings → AI model**; the key is encrypted the same way.
+
 The Gmail OAuth client secret and refresh token are entered in the Settings page and stored **encrypted** in the
 local database (ASP.NET Core Data Protection; keys in `App_Data/keys`, DPAPI-protected on Windows). They are never
 returned to the browser. AI API keys (later phases) will come from
 [user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables.
 
 The API listens on `localhost` only and has no login, as it is a single-user local tool. Do not expose it to a network.
+
+## AI providers
+
+Extraction runs through a Microsoft Agent Framework `ChatClientAgent` on top of `Microsoft.Extensions.AI`'s
+`IChatClient`, so the provider is a configuration choice:
+
+| Provider | Package | Notes |
+|----------|---------|-------|
+| Anthropic | `Anthropic` (official SDK) | e.g. `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` |
+| OpenAI | `OpenAI` + `Microsoft.Extensions.AI.OpenAI` | any chat model id |
+| OpenAI-compatible | same, custom endpoint | Ollama (`http://localhost:11434/v1`, no key), LM Studio, OpenRouter, Groq, Mistral, Gemini… |
+
+Changing provider or model needs no code change or restart. Adding a new provider means one case in
+`AiChatClientFactory`. The extractor agent has **no tools**: emails are untrusted data, so the model can only
+return structured data, which is then validated (links must appear in the email, values bounded, nulls kept).
 
 ## Database migrations
 
@@ -122,6 +146,13 @@ dotnet ef migrations add <Name> \
 | GET | `/api/settings/gmail/callback` | OAuth redirect target; returns the browser to Settings |
 | POST | `/api/settings/gmail/disconnect` | Revoke access and delete the stored token |
 | POST | `/api/settings/gmail/test` | Verify access; count and preview matching emails |
+| PUT | `/api/settings/gmail/sync-schedule` | `{ autoSyncEnabled, syncIntervalMinutes }` |
+| GET / PUT | `/api/settings/ai` | AI provider, model, endpoint (key is write-only) |
+| POST | `/api/settings/ai/test` | Send a tiny request to the configured model |
+| GET / DELETE | `/api/settings/sample-data` | Count / remove development sample data |
+| POST | `/api/sync` | Start a sync in the background (`202`, or `409` if one is running) |
+| GET | `/api/sync/status` | Latest sync status |
+| WS | `/hubs/sync` | SignalR hub pushing `syncStatus` events |
 
 Errors use RFC 7807 problem details (`404` unknown id, `400` invalid input, `409` conflicts with current state, `502` Google API failures).
 

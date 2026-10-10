@@ -86,6 +86,36 @@ internal sealed class GoogleGmailClient : IGmailOAuthClient, IGmailMailbox
             return new GmailSearchResult((int)(response.ResultSizeEstimate ?? previews.Count), previews);
         });
 
+    public Task<IReadOnlyList<string>> ListMessageIdsAsync(
+        GmailAccess access, string query, int maxResults, CancellationToken cancellationToken) =>
+        CallAsync<IReadOnlyList<string>>(access, async service =>
+        {
+            var ids = new List<string>();
+            string? pageToken = null;
+            do
+            {
+                var list = service.Users.Messages.List("me");
+                list.Q = query;
+                list.MaxResults = Math.Min(500, maxResults - ids.Count);
+                list.IncludeSpamTrash = false;
+                list.PageToken = pageToken;
+                var response = await list.ExecuteAsync(cancellationToken);
+                ids.AddRange((response.Messages ?? []).Select(m => m.Id));
+                pageToken = response.NextPageToken;
+            }
+            while (pageToken is not null && ids.Count < maxResults);
+
+            return ids;
+        });
+
+    public Task<GmailMessage> GetMessageAsync(GmailAccess access, string messageId, CancellationToken cancellationToken) =>
+        CallAsync(access, async service =>
+        {
+            var get = service.Users.Messages.Get("me", messageId);
+            get.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
+            return GmailMessageParser.Parse(await get.ExecuteAsync(cancellationToken));
+        });
+
     private static async Task<T> CallAsync<T>(GmailAccess access, Func<GmailService, Task<T>> call)
     {
         var flow = CreateFlow(access.Client);

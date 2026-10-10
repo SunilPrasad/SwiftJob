@@ -18,6 +18,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,6 +40,8 @@ import { GmailSettings, GmailTestResult } from '../../../core/models/gmail';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSelectModule,
+    MatSlideToggleModule,
     MatTooltipModule,
   ],
   templateUrl: './gmail-settings-card.html',
@@ -50,6 +54,14 @@ export class GmailSettingsCard {
   private readonly router = inject(Router);
 
   protected readonly settings = rxResource({ stream: () => this.api.get() });
+  protected readonly intervalOptions = [
+    { minutes: 15, label: '15 minutes' },
+    { minutes: 30, label: '30 minutes' },
+    { minutes: 60, label: 'hour' },
+    { minutes: 180, label: '3 hours' },
+    { minutes: 720, label: '12 hours' },
+    { minutes: 1440, label: 'day' },
+  ];
   protected readonly busy = signal(false);
   protected readonly testResult = signal<GmailTestResult | null>(null);
   protected readonly editingCredentials = signal(false);
@@ -160,6 +172,15 @@ export class GmailSettingsCard {
   protected resetQuery(settings: GmailSettings): void {
     this.searchQuery.setValue(settings.defaultSearchQuery);
     this.searchQuery.markAsDirty();
+  }
+
+  protected saveSchedule(autoSyncEnabled: boolean, minutes: number): void {
+    this.run(this.api.updateSyncSchedule(autoSyncEnabled, minutes), (s) => this.settings.set(s));
+  }
+
+  /** Re-reads settings (e.g. after a sync finished elsewhere). */
+  reload(): void {
+    this.settings.reload();
   }
 
   protected test(): void {

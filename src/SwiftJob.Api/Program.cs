@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using SwiftJob.Api.Infrastructure;
+using SwiftJob.Api.Sync;
 using SwiftJob.Application;
 using SwiftJob.Infrastructure;
+using SwiftJob.Application.Sync;
 using SwiftJob.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services
+    .AddSignalR()
+    .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
@@ -25,6 +30,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
+
+builder.Services.AddSingleton<ISyncStatusPublisher, SignalRSyncStatusPublisher>();
+builder.Services.AddSingleton<GmailSyncWorker>();
+builder.Services.AddSingleton<ISyncTrigger>(sp => sp.GetRequiredService<GmailSyncWorker>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GmailSyncWorker>());
 
 var app = builder.Build();
 
@@ -39,6 +49,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<SyncHub>(SyncHub.Path);
 
 await DatabaseInitializer.InitializeAsync(
     app.Services,

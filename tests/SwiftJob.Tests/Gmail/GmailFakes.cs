@@ -56,8 +56,28 @@ internal sealed class FakeGoogle : IGmailOAuthClient, IGmailMailbox
     public Task<string> GetEmailAddressAsync(GmailAccess access, CancellationToken ct)
     {
         LastAccess = access;
-        return MailboxFailure is null ? Task.FromResult(Email) : Task.FromException<string>(MailboxFailure);
+        return MailboxFailure is null || FailListing ? Task.FromResult(Email) : Task.FromException<string>(MailboxFailure);
     }
+
+    public Dictionary<string, GmailMessage> Messages { get; } = [];
+    public List<string> ListQueries { get; } = [];
+
+    public bool FailListing { get; set; }
+
+    public Task<IReadOnlyList<string>> ListMessageIdsAsync(GmailAccess access, string query, int maxResults, CancellationToken ct)
+    {
+        ListQueries.Add(query);
+        if (FailListing && MailboxFailure is not null)
+        {
+            return Task.FromException<IReadOnlyList<string>>(MailboxFailure);
+        }
+
+        return Task.FromResult<IReadOnlyList<string>>(
+            Messages.Values.OrderByDescending(m => m.ReceivedAt).Select(m => m.Id).Take(maxResults).ToList());
+    }
+
+    public Task<GmailMessage> GetMessageAsync(GmailAccess access, string messageId, CancellationToken ct) =>
+        Task.FromResult(Messages[messageId]);
 
     public Task<GmailSearchResult> SearchAsync(GmailAccess access, string query, int maxPreviews, CancellationToken ct)
     {

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SwiftJob.Domain.Ai;
 using SwiftJob.Domain.Applications;
 using SwiftJob.Domain.Candidates;
 using SwiftJob.Domain.Emails;
@@ -21,6 +22,7 @@ public interface IAppDbContext
     DbSet<ApplicationActivity> ApplicationActivities { get; }
     DbSet<ApplicationAnswer> ApplicationAnswers { get; }
     DbSet<GmailConnection> GmailConnections { get; }
+    DbSet<AiSettings> AiSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

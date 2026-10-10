@@ -13,6 +13,16 @@ public sealed record GmailMessagePreview(string Id, string? Subject, string? Fro
 
 public sealed record GmailSearchResult(int EstimatedMatches, IReadOnlyList<GmailMessagePreview> LatestMessages);
 
+/// <summary>A full email as downloaded from Gmail (untrusted content).</summary>
+public sealed record GmailMessage(
+    string Id,
+    string? ThreadId,
+    string? Subject,
+    string? From,
+    DateTime ReceivedAt,
+    string? BodyText,
+    string? BodyHtml);
+
 /// <summary>Google OAuth 2.0 operations. Implementations must request only the read-only Gmail scope.</summary>
 public interface IGmailOAuthClient
 {
@@ -36,6 +46,12 @@ public interface IGmailMailbox
     /// <exception cref="Common.ExternalServiceException">The Gmail API call failed.</exception>
     Task<GmailSearchResult> SearchAsync(
         GmailAccess access, string query, int maxPreviews, CancellationToken cancellationToken);
+
+    /// <summary>Ids of messages matching <paramref name="query"/>, newest first, up to <paramref name="maxResults"/>.</summary>
+    Task<IReadOnlyList<string>> ListMessageIdsAsync(
+        GmailAccess access, string query, int maxResults, CancellationToken cancellationToken);
+
+    Task<GmailMessage> GetMessageAsync(GmailAccess access, string messageId, CancellationToken cancellationToken);
 }
 
 /// <summary>One-time, short-lived values that protect the OAuth redirect against CSRF.</summary>

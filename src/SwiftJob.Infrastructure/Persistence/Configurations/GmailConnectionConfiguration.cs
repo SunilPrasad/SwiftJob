@@ -14,6 +14,8 @@ internal sealed class GmailConnectionConfiguration : IEntityTypeConfiguration<Gm
         builder.Property(c => c.ConnectedEmail).HasMaxLength(320);
         builder.Property(c => c.GrantedScopes).HasMaxLength(2000);
         builder.Property(c => c.SearchQuery).HasMaxLength(1000).IsRequired();
+        builder.Property(c => c.LastSyncSummary).HasMaxLength(1000);
+        builder.Property(c => c.LastSyncError).HasMaxLength(4000);
         builder.Ignore(c => c.HasClientCredentials);
         builder.Ignore(c => c.IsConnected);
     }

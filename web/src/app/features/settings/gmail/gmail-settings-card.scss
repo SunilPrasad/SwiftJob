@@ -138,3 +138,18 @@ h3 {
 .small {
   font: var(--mat-sys-body-small);
 }
+
+.sync-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.interval {
+  width: 160px;
+}
+
+.sync-error {
+  color: var(--mat-sys-error);
+}

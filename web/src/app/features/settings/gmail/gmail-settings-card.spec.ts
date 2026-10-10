@@ -15,6 +15,11 @@ const base: GmailSettings = {
   connectedAt: null,
   searchQuery: 'label:jobs',
   defaultSearchQuery: 'label:jobs',
+  autoSyncEnabled: true,
+  syncIntervalMinutes: 30,
+  lastSyncCompletedAt: null,
+  lastSyncSummary: null,
+  lastSyncError: null,
 };
 
 describe('GmailSettingsCard', () => {

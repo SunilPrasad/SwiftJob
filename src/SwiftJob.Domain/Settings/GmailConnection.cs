@@ -29,6 +29,19 @@ public class GmailConnection : AuditableEntity
 
     public string SearchQuery { get; set; } = DefaultSearchQuery;
 
+    /// <summary>How far back the first synchronisation reads.</summary>
+    public const int InitialSyncDays = 30;
+    public const int DefaultSyncIntervalMinutes = 30;
+
+    public bool AutoSyncEnabled { get; set; } = true;
+    public int SyncIntervalMinutes { get; set; } = DefaultSyncIntervalMinutes;
+
+    /// <summary>Start time of the last synchronisation that completed without a fatal error.</summary>
+    public DateTime? LastSuccessfulSyncStartedAt { get; set; }
+    public DateTime? LastSyncCompletedAt { get; set; }
+    public string? LastSyncSummary { get; set; }
+    public string? LastSyncError { get; set; }
+
     public bool HasClientCredentials => !string.IsNullOrWhiteSpace(ClientId) && ProtectedClientSecret is not null;
 
     public bool IsConnected => ProtectedRefreshToken is not null;
@@ -43,6 +56,7 @@ public class GmailConnection : AuditableEntity
 
     public void Disconnect()
     {
+        // Sync history is kept; already imported emails and jobs remain in the database.
         ProtectedRefreshToken = null;
         ConnectedEmail = null;
         GrantedScopes = null;

@@ -17,6 +17,40 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("SwiftJob.Domain.Ai.AiSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Endpoint")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedApiKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AiSettings");
+                });
+
             modelBuilder.Entity("SwiftJob.Domain.Applications.ApplicationActivity", b =>
                 {
                     b.Property<int>("Id")
@@ -417,6 +451,9 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ProcessingAttempts")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ProcessingError")
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
@@ -582,6 +619,9 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("AutoSyncEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ClientId")
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
@@ -600,6 +640,20 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("LastSuccessfulSyncStartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastSyncCompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastSyncSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ProtectedClientSecret")
                         .HasMaxLength(2000)
                         .HasColumnType("TEXT");
@@ -612,6 +666,9 @@ namespace SwiftJob.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SyncIntervalMinutes")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");

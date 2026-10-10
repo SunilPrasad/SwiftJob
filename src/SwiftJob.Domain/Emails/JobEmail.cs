@@ -19,6 +19,10 @@ public class JobEmail : Entity
 
     public EmailSyncStatus SyncStatus { get; set; } = EmailSyncStatus.Pending;
     public string? ProcessingError { get; set; }
+
+    /// <summary>Number of extraction attempts; failed emails are retried a limited number of times.</summary>
+    public int ProcessingAttempts { get; set; }
+    public const int MaxProcessingAttempts = 3;
     public DateTime SyncedAt { get; set; }
     public DateTime? ProcessedAt { get; set; }
 

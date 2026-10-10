@@ -13,6 +13,11 @@ public interface IGmailConnectionService
 
     Task<GmailSettingsDto> UpdateSearchQueryAsync(string searchQuery, CancellationToken cancellationToken);
 
+    Task<GmailSettingsDto> UpdateSyncScheduleAsync(bool autoSyncEnabled, int intervalMinutes, CancellationToken cancellationToken);
+
+    /// <exception cref="Common.ConflictException">Gmail is not connected.</exception>
+    Task<(Domain.Settings.GmailConnection Connection, GmailAccess Access)> GetAccessAsync(CancellationToken cancellationToken);
+
     /// <summary>Starts Google sign-in: returns the URL the browser must open.</summary>
     /// <exception cref="Common.ConflictException">Client credentials are not configured.</exception>
     Task<GmailAuthorizationDto> BeginAuthorizationAsync(CancellationToken cancellationToken);

@@ -251,6 +251,47 @@
           </button>
         </div>
       </section>
+
+      <!-- Step 4: synchronisation -->
+      <section>
+        <h3>4. Synchronisation</h3>
+        <div class="sync-row">
+          <mat-slide-toggle
+            [checked]="s.autoSyncEnabled"
+            (change)="saveSchedule($event.checked, s.syncIntervalMinutes)"
+            [disabled]="busy()"
+          >
+            Sync automatically
+          </mat-slide-toggle>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="interval">
+            <mat-label>Every</mat-label>
+            <mat-select
+              [value]="s.syncIntervalMinutes"
+              (selectionChange)="saveSchedule(s.autoSyncEnabled, $event.value)"
+              [disabled]="busy() || !s.autoSyncEnabled"
+            >
+              @for (option of intervalOptions; track option.minutes) {
+                <mat-option [value]="option.minutes">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <p class="muted small">
+          The first sync reads the last 30 days; later syncs only fetch new emails. Already imported
+          emails are never processed twice.
+        </p>
+        @if (s.lastSyncCompletedAt) {
+          <p class="small">
+            Last sync {{ s.lastSyncCompletedAt | date: 'd MMM y, HH:mm' }}:
+            @if (s.lastSyncSummary) {
+              {{ s.lastSyncSummary }}
+            }
+          </p>
+        }
+        @if (s.lastSyncError) {
+          <p class="small sync-error"><mat-icon inline>warning</mat-icon> {{ s.lastSyncError }}</p>
+        }
+      </section>
     </mat-card-content>
   } @else if (settings.error()) {
     <mat-card-content>

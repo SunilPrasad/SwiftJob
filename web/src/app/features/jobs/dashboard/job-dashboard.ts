@@ -9,13 +9,15 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { map } from 'rxjs';
+import { Router } from '@angular/router';
+import { finalize, map } from 'rxjs';
 import { JOB_STATUS_LABELS, JobListItem, JobStatus } from '../../../core/models/job';
+import { SyncStatusService } from '../../../core/realtime/sync-status';
 import { SplitResizer } from '../../../shared/split-resizer';
 import { JobsStore } from '../data/jobs-store';
 import { JobDetailsPanel } from '../details/job-details-panel';
@@ -37,7 +39,7 @@ import {
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule,
+    MatProgressBarModule,
     JobDetailsPanel,
     JobFilters,
     JobTable,
@@ -50,6 +52,9 @@ export class JobDashboard {
   protected readonly store = inject(JobsStore);
   private readonly snackBar = inject(MatSnackBar);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly router = inject(Router);
+  protected readonly sync = inject(SyncStatusService);
+  protected readonly syncRequested = signal(false);
 
   /** On phones there is no room to split: the details replace the list. */
   protected readonly isHandset = toSignal(
@@ -76,6 +81,20 @@ export class JobDashboard {
   });
 
   constructor() {
+    this.sync.connect();
+    this.sync.completed$.pipe(takeUntilDestroyed()).subscribe((result) => {
+      this.store.refresh();
+      const failed = result.state === 'Failed';
+      const ref = this.snackBar.open(
+        failed ? `Sync failed: ${result.message}` : result.message,
+        failed ? 'Settings' : 'OK',
+        { duration: failed ? 10000 : 6000 },
+      );
+      if (failed) {
+        ref.onAction().subscribe(() => void this.router.navigate(['/settings']));
+      }
+    });
+
     const observer = new ResizeObserver(([entry]) =>
       this.containerWidth.set(entry.contentRect.width),
     );
@@ -124,6 +143,15 @@ export class JobDashboard {
       },
       error: () => undefined,
     });
+  }
+
+  protected syncJobs(): void {
+    this.syncRequested.set(true);
+    // Failures (e.g. Gmail not connected) are reported by apiErrorInterceptor.
+    this.sync
+      .start()
+      .pipe(finalize(() => this.syncRequested.set(false)))
+      .subscribe({ error: () => undefined });
   }
 
   protected refresh(): void {

@@ -149,6 +149,34 @@ public sealed class GmailConnectionService(
         return ToDto(connection);
     }
 
+    public async Task<GmailSettingsDto> UpdateSyncScheduleAsync(
+        bool autoSyncEnabled, int intervalMinutes, CancellationToken cancellationToken)
+    {
+        if (intervalMinutes is < 5 or > 1440)
+        {
+            throw new ArgumentException("The sync interval must be between 5 and 1440 minutes.", nameof(intervalMinutes));
+        }
+
+        var connection = await GetOrCreateAsync(cancellationToken);
+        connection.AutoSyncEnabled = autoSyncEnabled;
+        connection.SyncIntervalMinutes = intervalMinutes;
+        await db.SaveChangesAsync(cancellationToken);
+        return ToDto(connection);
+    }
+
+    /// <summary>Decrypted access for the connected account (used by synchronisation).</summary>
+    /// <exception cref="ConflictException">Gmail is not connected.</exception>
+    public async Task<(GmailConnection Connection, GmailAccess Access)> GetAccessAsync(CancellationToken cancellationToken)
+    {
+        var connection = await FindAsync(cancellationToken);
+        if (connection is not { IsConnected: true, HasClientCredentials: true })
+        {
+            throw new ConflictException("Gmail is not connected. Connect it in Settings.");
+        }
+
+        return (connection, new GmailAccess(ClientOf(connection), protector.Unprotect(connection.ProtectedRefreshToken!)));
+    }
+
     public async Task<GmailTestResultDto> TestConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = await FindAsync(cancellationToken);
@@ -210,5 +238,10 @@ public sealed class GmailConnectionService(
         connection.ConnectedEmail,
         connection.ConnectedAt,
         connection.SearchQuery,
-        GmailConnection.DefaultSearchQuery);
+        GmailConnection.DefaultSearchQuery,
+        connection.AutoSyncEnabled,
+        connection.SyncIntervalMinutes,
+        connection.LastSyncCompletedAt,
+        connection.LastSyncSummary,
+        connection.LastSyncError);
 }

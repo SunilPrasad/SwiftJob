@@ -24,6 +24,16 @@ export class GmailSettingsApi {
     return this.http.put<GmailSettings>(`${this.baseUrl}/search-query`, { searchQuery });
   }
 
+  updateSyncSchedule(
+    autoSyncEnabled: boolean,
+    syncIntervalMinutes: number,
+  ): Observable<GmailSettings> {
+    return this.http.put<GmailSettings>(`${this.baseUrl}/sync-schedule`, {
+      autoSyncEnabled,
+      syncIntervalMinutes,
+    });
+  }
+
   /** Returns the Google sign-in URL to navigate to. */
   connect(): Observable<{ authorizationUrl: string }> {
     return this.http.post<{ authorizationUrl: string }>(`${this.baseUrl}/connect`, null);

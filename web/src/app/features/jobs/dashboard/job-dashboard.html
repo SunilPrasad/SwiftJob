@@ -9,12 +9,28 @@
         <button mat-stroked-button (click)="refresh()" [disabled]="store.jobs.isLoading()">
           <mat-icon>refresh</mat-icon> Refresh
         </button>
-        <!-- Gmail synchronisation is implemented in Phase 2. -->
-        <span matTooltip="Gmail synchronisation arrives in Phase 2">
-          <button mat-flat-button disabled><mat-icon>sync</mat-icon> Sync jobs</button>
-        </span>
+        <button
+          mat-flat-button
+          (click)="syncJobs()"
+          [disabled]="sync.isRunning() || syncRequested()"
+        >
+          <mat-icon [class.spin]="sync.isRunning()">sync</mat-icon>
+          {{ sync.isRunning() ? 'Syncing…' : 'Sync jobs' }}
+        </button>
       </div>
     </div>
+
+    @if (sync.status(); as st) {
+      @if (st.state === 'Running') {
+        <div class="sync-banner" role="status">
+          <mat-progress-bar
+            [mode]="st.total > 0 ? 'determinate' : 'indeterminate'"
+            [value]="st.total > 0 ? (st.processed / st.total) * 100 : 0"
+          />
+          <span>{{ st.message }}</span>
+        </div>
+      }
+    }
 
     <app-job-filters
       [counts]="store.counts.value()"

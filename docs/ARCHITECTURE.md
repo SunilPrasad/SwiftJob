@@ -77,9 +77,9 @@ SwiftJob/
 | Frontend | Angular 22.2, Angular Material 22.2 (Material 3) | standalone components, signals, zoneless |
 | Frontend tests | Vitest 5 via `ng test` (Angular CLI default) | jsdom environment |
 | Node.js | 24 LTS (≥ 24.15) or 22 (≥ 22.22.3) | required by Angular CLI 22 |
-| Real-time (Phase 2+) | ASP.NET Core SignalR + `@microsoft/signalr` 10 | |
+| Real-time | ASP.NET Core SignalR + `@microsoft/signalr` 10 | sync progress |
 | Email (Phase 2) | `Google.Apis.Gmail.v1` + `Google.Apis.Auth` | `gmail.readonly` scope |
-| AI (Phase 4) | `Microsoft.Extensions.AI` (`IChatClient`) with OpenAI / Anthropic adapters | versions verified when Phase 4 starts |
+| AI | Microsoft Agent Framework `Microsoft.Agents.AI` 1.24, `Microsoft.Extensions.AI` 10.10, `Anthropic` 12.55, `Microsoft.Extensions.AI.OpenAI` 10.10 | provider chosen in Settings |
 | Browser (Phase 4/5) | `Microsoft.Playwright` for .NET, Chromium | see §8 |
 
 ## 5. Data model
@@ -149,6 +149,17 @@ Implementation approach:
   `GoogleGmailClient` (Infrastructure) is the only class that references the Google SDK.
 * Only `gmail.readonly` is requested; the granted scope is checked and broader grants are revoked.
 * One Gmail account per installation (`GmailConnection` row).
+
+### AI layer and synchronisation (implemented)
+
+* `IAiChatClientFactory` (Infrastructure) is the only code that references concrete SDKs: the official Anthropic
+  SDK (`AsIChatClient`) and the OpenAI SDK (also used for OpenAI-compatible endpoints). It returns a
+  provider-neutral `IChatClient`.
+* `AgentJobExtractionService` builds a Microsoft Agent Framework `ChatClientAgent` with no tools and calls
+  `RunAsync<T>` for structured output. `JobImporter` (Application) validates everything the model returns.
+* `JobSyncService` (Application) orchestrates Gmail → emails → jobs; `GmailSyncWorker` (Api) runs it on a schedule
+  or on request (one at a time); `SignalRSyncStatusPublisher` pushes progress to `/hubs/sync`.
+* Azure AI Foundry is deliberately not used; any provider with an `IChatClient` adapter can be added in one place.
 
 ## 8. Evaluation: live browser viewing and control
 

@@ -1,0 +1,134 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-icon mat-card-avatar class="avatar">psychology</mat-icon>
+    <mat-card-title>AI model</mat-card-title>
+    <mat-card-subtitle
+      >Used to extract jobs from emails. Switch provider or model at any time.</mat-card-subtitle
+    >
+  </mat-card-header>
+
+  <div class="progress-slot">
+    @if (busy() || settings.isLoading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  @if (settings.value(); as s) {
+    <mat-card-content>
+      <div class="status" [class.ok]="s.isConfigured">
+        <mat-icon>{{ s.isConfigured ? 'check_circle' : 'settings' }}</mat-icon>
+        @if (s.isConfigured) {
+          <span
+            >Using <strong>{{ s.model }}</strong> via {{ s.provider }}</span
+          >
+        } @else {
+          <span>Not configured. Choose a provider and model below.</span>
+        }
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="form">
+        <mat-form-field appearance="outline">
+          <mat-label>Provider</mat-label>
+          <mat-select formControlName="provider">
+            @for (p of s.providers; track p.provider) {
+              <mat-option [value]="p.provider">{{ p.displayName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (providerInfo(); as info) {
+          <p class="provider-notes">{{ info.notes }}</p>
+        }
+
+        <mat-form-field appearance="outline">
+          <mat-label>Model</mat-label>
+          <input
+            matInput
+            formControlName="model"
+            [matAutocomplete]="models"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <mat-autocomplete #models="matAutocomplete">
+            @for (m of providerInfo()?.suggestedModels ?? []; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
+            }
+          </mat-autocomplete>
+          <mat-hint>Any model id offered by the provider can be entered.</mat-hint>
+        </mat-form-field>
+
+        @if (providerInfo()?.requiresEndpoint) {
+          <mat-form-field appearance="outline">
+            <mat-label>Endpoint URL</mat-label>
+            <input
+              matInput
+              formControlName="endpoint"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="http://localhost:11434/v1"
+            />
+            <mat-hint
+              >Base URL of the OpenAI-compatible API (e.g. Ollama, OpenRouter, Groq).</mat-hint
+            >
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline">
+          <mat-label>API key{{ providerInfo()?.requiresApiKey ? '' : ' (optional)' }}</mat-label>
+          <input
+            matInput
+            type="password"
+            formControlName="apiKey"
+            autocomplete="new-password"
+            [placeholder]="
+              keyStoredForSelection() ? 'Saved (encrypted). Leave empty to keep it.' : ''
+            "
+          />
+          @if (form.controls.apiKey.hasError('required')) {
+            <mat-error>An API key is required for this provider.</mat-error>
+          } @else {
+            <mat-hint>
+              Stored encrypted on this computer and never shown again.
+              @if (providerInfo(); as info) {
+                <a [href]="info.apiKeyHelpUrl" target="_blank" rel="noopener noreferrer"
+                  >Get a key</a
+                >
+              }
+            </mat-hint>
+          }
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="busy()">Save</button>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="test()"
+            [disabled]="busy() || !s.isConfigured"
+          >
+            <mat-icon>bolt</mat-icon> Test model
+          </button>
+          @if (keyStoredForSelection() && !providerInfo()?.requiresApiKey) {
+            <button mat-button type="button" (click)="removeKey()" [disabled]="busy()">
+              Remove key
+            </button>
+          }
+        </div>
+      </form>
+
+      @if (testResult(); as t) {
+        <div class="test-result" [class.failed]="!t.success" role="status">
+          <mat-icon>{{ t.success ? 'check_circle' : 'error' }}</mat-icon>
+          <span>{{ t.message }}</span>
+        </div>
+      }
+
+      <p class="note">
+        <mat-icon inline>shield</mat-icon>
+        Only the email being processed is sent to the model, as untrusted data. The model cannot
+        browse, run tools or change anything; every extracted link is checked against the email
+        before it is saved. AI provider usage may incur costs.
+      </p>
+    </mat-card-content>
+  }
+</mat-card>

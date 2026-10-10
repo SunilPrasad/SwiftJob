@@ -30,6 +30,10 @@ public sealed class GmailSettingsController(
     public Task<GmailSettingsDto> UpdateSearchQuery(UpdateGmailSearchQueryRequest request, CancellationToken cancellationToken) =>
         gmail.UpdateSearchQueryAsync(request.SearchQuery, cancellationToken);
 
+    [HttpPut("sync-schedule")]
+    public Task<GmailSettingsDto> UpdateSyncSchedule(UpdateSyncScheduleRequest request, CancellationToken cancellationToken) =>
+        gmail.UpdateSyncScheduleAsync(request.AutoSyncEnabled, request.SyncIntervalMinutes, cancellationToken);
+
     /// <summary>Returns the Google sign-in URL the browser should open.</summary>
     [HttpPost("connect")]
     public Task<GmailAuthorizationDto> Connect(CancellationToken cancellationToken) =>

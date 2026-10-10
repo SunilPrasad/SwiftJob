@@ -79,6 +79,31 @@ public sealed class SampleDataSeeder(AppDbContext db, TimeProvider timeProvider,
         return jobCount;
     }
 
+    /// <summary>Deletes sample emails and the jobs that only came from them. Real data is untouched.</summary>
+    /// <returns>Number of sample jobs removed.</returns>
+    public async Task<int> RemoveAsync(CancellationToken cancellationToken = default)
+    {
+        var sampleEmails = await db.JobEmails
+            .Where(e => e.GmailMessageId.StartsWith(SampleMessageIdPrefix))
+            .ToListAsync(cancellationToken);
+        var sampleEmailIds = sampleEmails.Select(e => e.Id).ToList();
+
+        var jobs = await db.Jobs
+            .Where(j => j.EmailLinks.Any()
+                        && j.EmailLinks.All(l => sampleEmailIds.Contains(l.JobEmailId))
+                        && !j.ApplicationSessions.Any())
+            .ToListAsync(cancellationToken);
+
+        db.Jobs.RemoveRange(jobs);
+        db.JobEmails.RemoveRange(sampleEmails);
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Removed {JobCount} sample jobs and {EmailCount} sample emails", jobs.Count, sampleEmails.Count);
+        return jobs.Count;
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
+        db.JobEmails.CountAsync(e => e.GmailMessageId.StartsWith(SampleMessageIdPrefix), cancellationToken);
+
     private static string BuildBody(SampleEmail sample) =>
         string.Join("\n\n", sample.Jobs.Select(j =>
             $"{j.Title}\n{j.Company ?? "Company not disclosed"} - {j.Location ?? "Location not specified"}\n" +

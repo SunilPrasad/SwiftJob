@@ -5,7 +5,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SwiftJob.Application.Abstractions;
+using SwiftJob.Application.Ai;
+using SwiftJob.Application.Extraction;
 using SwiftJob.Application.Gmail;
+using SwiftJob.Infrastructure.Ai;
 using SwiftJob.Infrastructure.Gmail;
 using SwiftJob.Infrastructure.Persistence;
 using SwiftJob.Infrastructure.Persistence.Seeding;
@@ -34,6 +37,7 @@ public static class DependencyInjection
 
         AddSecretProtection(services, configuration, contentRootPath);
         AddGmail(services, configuration);
+        AddAi(services);
 
         return services;
     }
@@ -63,6 +67,13 @@ public static class DependencyInjection
         services.AddSingleton<GoogleGmailClient>();
         services.AddSingleton<IGmailOAuthClient>(sp => sp.GetRequiredService<GoogleGmailClient>());
         services.AddSingleton<IGmailMailbox>(sp => sp.GetRequiredService<GoogleGmailClient>());
+    }
+
+    private static void AddAi(IServiceCollection services)
+    {
+        services.AddSingleton<IAiChatClientFactory, AiChatClientFactory>();
+        services.AddScoped<IAiConnectionProbe, AgentConnectionProbe>();
+        services.AddScoped<IJobExtractionService, AgentJobExtractionService>();
     }
 
     /// <summary>Makes a relative SQLite file path absolute (relative to the content root) and ensures its folder exists.</summary>
