@@ -73,3 +73,7 @@ table.compact .mat-mdc-cell,
 table.compact .mat-mdc-header-cell {
   padding: 0 8px;
 }
+
+:host {
+  display: block;
+}

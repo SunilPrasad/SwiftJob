@@ -17,11 +17,13 @@ AI browser agent — which you can watch, pause and take over — to help comple
   * Search by title/company, filter by source, date range and status; server-side paging.
   * Live counts for New / Applied / Not relevant / All (respecting the current search and filters).
   * Mark **Applied** / **Not relevant** from the row or the panel, with **Undo**; move any job back to **New**.
-  * Left-side details panel with salary, location, work mode, source, received date, description (original and,
+  * Split view: clicking a job docks the details on the left and keeps the list on the right. Drag the divider
+    (or focus it and use the arrow keys) to resize; double-click resets. The width is remembered.
+  * Details panel with salary, location, work mode, source, received date, description (original and,
     when present, enriched), requirements, job link and the original email(s) — viewable as plain text or opened in Gmail.
   * Responsive layout down to phone width.
 * Automated tests: 36 .NET tests (domain, services on real SQLite, constraints, HTTP integration) and
-  23 Angular tests (API client, signal store, details panel, URL/date helpers).
+  29 Angular tests (API client, signal store, details panel, split resizer, helpers).
 
 ## Prerequisites
 

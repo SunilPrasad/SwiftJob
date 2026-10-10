@@ -48,12 +48,17 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Refresh action
 - [x] Left-side job details panel (all fields, description, enriched description tab, requirements,
       job link, original email(s) + Open in Gmail)
+- [x] Details panel docked as a split view (not a pop-up): details on the left, job list on the right
+- [x] Resizable split: drag the divider, arrow keys (Shift = bigger steps), double-click to reset
+- [x] Chosen panel width remembered between visits
+- [x] Job list stays usable while details are open; table columns adapt to the available width
+- [x] On phones the details open full screen and Close returns to the list
 - [x] Responsive layout (desktop, tablet, phone)
 - [x] Untrusted content rendered as plain text; only http(s) links allowed
 
 ### Quality
 - [x] 36 backend tests (domain, services on real SQLite, constraints, HTTP integration)
-- [x] 23 frontend tests (API client, store, details panel, helpers)
+- [x] 29 frontend tests (API client, store, details panel, split resizer, helpers)
 - [x] Manual end-to-end check in Chromium (desktop + mobile)
 - [x] GitHub Actions CI (build + tests for backend and frontend)
 - [x] README with setup and run instructions

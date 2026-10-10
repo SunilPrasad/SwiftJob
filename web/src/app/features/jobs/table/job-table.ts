@@ -1,7 +1,16 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -10,7 +19,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { map } from 'rxjs';
 import { JobListItem, JobSortField, JobStatus, SortDirection } from '../../../core/models/job';
 import { JobStatusChange } from '../shared/job-status-actions';
 import { JobStatusChip } from '../shared/job-status-chip';
@@ -70,21 +78,18 @@ export class JobTable {
 
   protected readonly pageSizeOptions = [10, 25, 50, 100];
 
-  private readonly breakpoints = inject(BreakpointObserver);
-  private readonly size = toSignal(
-    this.breakpoints
-      .observe(['(max-width: 720px)', '(max-width: 1100px)'])
-      .pipe(
-        map((state) =>
-          state.breakpoints['(max-width: 720px)']
-            ? 'small'
-            : state.breakpoints['(max-width: 1100px)']
-              ? 'medium'
-              : 'large',
-        ),
-      ),
-    { initialValue: 'large' },
+  /** Columns follow the table's own width, so they adapt when the details pane is resized. */
+  private readonly width = signal(1200);
+  private readonly size = computed(() =>
+    this.width() < 600 ? 'small' : this.width() < 1000 ? 'medium' : 'large',
   );
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const observer = new ResizeObserver(([entry]) => this.width.set(entry.contentRect.width));
+    afterNextRender(() => observer.observe(host));
+    inject(DestroyRef).onDestroy(() => observer.disconnect());
+  }
 
   protected readonly columns = computed(() =>
     this.size() === 'small'

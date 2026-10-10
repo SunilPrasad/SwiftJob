@@ -1,21 +1,30 @@
-<mat-sidenav-container class="container" (backdropClick)="closePanel()">
-  <mat-sidenav
-    class="details-sidenav"
-    position="start"
-    mode="over"
-    [opened]="panelOpen()"
-    [class.full-width]="isHandset()"
-    (closedStart)="closePanel()"
-  >
-    <app-job-details-panel
-      [job]="store.selectedJob.value()"
-      [loading]="store.selectedJob.isLoading()"
-      (closed)="closePanel()"
-      (statusChange)="changeJobStatus($event)"
-    />
-  </mat-sidenav>
+<div class="layout" [class.split]="panelOpen()" [class.handset]="isHandset()">
+  @if (panelOpen()) {
+    <aside
+      class="details"
+      aria-label="Job details"
+      [style.width.px]="isHandset() ? null : detailsWidth()"
+    >
+      <app-job-details-panel
+        [job]="store.selectedJob.value()"
+        [loading]="store.selectedJob.isLoading()"
+        (closed)="closePanel()"
+        (statusChange)="changeJobStatus($event)"
+      />
+    </aside>
 
-  <mat-sidenav-content class="content">
+    @if (!isHandset()) {
+      <app-split-resizer
+        [width]="detailsWidth()"
+        [min]="minDetailsWidth"
+        [max]="maxDetailsWidth()"
+        (widthChange)="resizeDetails($event)"
+        (reset)="resetDetailsWidth()"
+      />
+    }
+  }
+
+  <section class="list" [hidden]="panelOpen() && isHandset()">
     <div class="page-header">
       <div>
         <h1>Jobs</h1>
@@ -60,5 +69,5 @@
       (pageChange)="store.setPage($event.page, $event.pageSize)"
       (sortChange)="store.setSort($event.sortBy, $event.sortDirection)"
     />
-  </mat-sidenav-content>
-</mat-sidenav-container>
+  </section>
+</div>
