@@ -116,4 +116,5 @@ src/SwiftJob.Api              ASP.NET Core host: controllers, error handling, co
 tests/SwiftJob.Tests          unit + integration tests
 web/                          Angular 22 application
 docs/ARCHITECTURE.md          architecture, technology evaluation, risks and phase plan
+TASKS.md                      progress checklist for all phases
 ```
