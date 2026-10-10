@@ -1,0 +1,36 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-row {
+  overflow-x: auto;
+}
+
+.count {
+  margin-left: 6px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container-high);
+  font: var(--mat-sys-label-small);
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.search {
+  flex: 2 1 260px;
+}
+
+.source {
+  flex: 1 1 160px;
+}
+
+.dates {
+  flex: 1 1 240px;
+}

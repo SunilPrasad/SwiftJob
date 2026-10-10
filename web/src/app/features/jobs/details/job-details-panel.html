@@ -1,0 +1,148 @@
+<header class="panel-header">
+  <div class="heading">
+    @if (job(); as job) {
+      <h2 class="title">{{ job.title }}</h2>
+      <p class="company">{{ job.company ?? 'Company not specified' }}</p>
+    } @else {
+      <h2 class="title">Job details</h2>
+    }
+  </div>
+  <button mat-icon-button aria-label="Close details" (click)="closed.emit()">
+    <mat-icon>close</mat-icon>
+  </button>
+</header>
+
+<div class="progress-slot">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</div>
+
+@if (job(); as job) {
+  <div class="panel-body">
+    <div class="actions">
+      <!-- Auto Apply is implemented in Phase 4 (AI application agent). -->
+      <span matTooltip="AI-assisted applications arrive in Phase 4">
+        <button mat-flat-button disabled><mat-icon>smart_toy</mat-icon> Auto apply</button>
+      </span>
+      @if (job.status !== 'Applied') {
+        <button mat-stroked-button (click)="setStatus(job, 'Applied')">
+          <mat-icon>task_alt</mat-icon> Mark applied
+        </button>
+      }
+      @if (job.status !== 'NotRelevant') {
+        <button mat-stroked-button (click)="setStatus(job, 'NotRelevant')">
+          <mat-icon>block</mat-icon> Not relevant
+        </button>
+      }
+      @if (job.status !== 'New') {
+        <button mat-button (click)="setStatus(job, 'New')">
+          <mat-icon>undo</mat-icon> Move to New
+        </button>
+      }
+    </div>
+
+    <dl class="facts">
+      <div>
+        <dt>Status</dt>
+        <dd><app-job-status-chip [status]="job.status" /></dd>
+      </div>
+      <div>
+        <dt>Salary</dt>
+        <dd>{{ job.salaryText ?? 'Not specified' }}</dd>
+      </div>
+      <div>
+        <dt>Location</dt>
+        <dd>{{ job.location ?? 'Not specified' }}</dd>
+      </div>
+      <div>
+        <dt>Work mode</dt>
+        <dd>{{ workModeLabels[job.workMode] }}</dd>
+      </div>
+      <div>
+        <dt>Source</dt>
+        <dd>
+          {{ job.source }}
+          @if (job.sourceJobId) {
+            <span class="muted source-id">#{{ job.sourceJobId }}</span>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Received</dt>
+        <dd>{{ job.receivedAt | date: 'EEE d MMM y, HH:mm' }}</dd>
+      </div>
+    </dl>
+
+    <section>
+      <h3>Description</h3>
+      @if (job.enrichedDescription) {
+        <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
+          <mat-tab label="From email">
+            <p class="text">{{ job.description ?? 'No description in the email.' }}</p>
+          </mat-tab>
+          <mat-tab label="From job website">
+            <p class="text">{{ job.enrichedDescription }}</p>
+            <p class="muted small">Retrieved {{ job.enrichedAt | date: 'medium' }}</p>
+          </mat-tab>
+        </mat-tab-group>
+      } @else if (job.description) {
+        <p class="text">{{ job.description }}</p>
+      } @else {
+        <p class="muted">No description was found in the email.</p>
+      }
+    </section>
+
+    @if (job.requirements) {
+      <section>
+        <h3>Requirements</h3>
+        <p class="text">{{ job.requirements }}</p>
+      </section>
+    }
+
+    <section>
+      <h3>Links</h3>
+      @if (applicationUrl(); as url) {
+        <a mat-stroked-button [href]="url" target="_blank" rel="noopener noreferrer">
+          <mat-icon>open_in_new</mat-icon> Open job posting
+        </a>
+        <p class="muted small url">{{ url }}</p>
+      } @else {
+        <p class="muted">No valid application link was found.</p>
+      }
+    </section>
+
+    <section>
+      <h3>Original email{{ job.emails.length === 1 ? '' : 's' }}</h3>
+      <mat-accordion displayMode="flat">
+        @for (email of job.emails; track email.id) {
+          <mat-expansion-panel (expandedChange)="toggleEmail(email.id, $event)">
+            <mat-expansion-panel-header>
+              <mat-panel-title>{{ email.subject ?? '(no subject)' }}</mat-panel-title>
+            </mat-expansion-panel-header>
+            <p class="muted small">
+              From {{ email.sender ?? 'unknown sender' }} ·
+              {{ email.receivedAt | date: 'EEE d MMM y, HH:mm' }}
+            </p>
+            @if (safeUrl(email.gmailUrl); as gmailUrl) {
+              <a mat-button [href]="gmailUrl" target="_blank" rel="noopener noreferrer">
+                <mat-icon>mail</mat-icon> Open in Gmail
+              </a>
+            }
+            @if (openEmailId() === email.id) {
+              @if (openEmail.isLoading()) {
+                <mat-progress-bar mode="indeterminate" />
+              } @else if (openEmail.value(); as detail) {
+                <pre class="email-body">{{
+                  detail.bodyText ?? 'This email has no readable body.'
+                }}</pre>
+              }
+            }
+          </mat-expansion-panel>
+        } @empty {
+          <p class="muted">No source email is linked to this job.</p>
+        }
+      </mat-accordion>
+    </section>
+  </div>
+}

@@ -1,0 +1,75 @@
+.table-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+}
+
+.progress-slot {
+  height: 4px;
+}
+
+table {
+  width: 100%;
+}
+
+.job-row {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  &.selected {
+    background: var(--mat-sys-secondary-container);
+  }
+}
+
+.title {
+  font-weight: 500;
+}
+
+.title-cell {
+  min-width: 180px;
+}
+
+.secondary {
+  display: block;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.muted {
+  color: var(--mat-sys-outline);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.actions-cell {
+  text-align: right;
+  width: 1%;
+}
+
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+table.compact .mat-mdc-cell,
+table.compact .mat-mdc-header-cell {
+  padding: 0 8px;
+}

@@ -1,0 +1,103 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px 16px 12px 24px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font: var(--mat-sys-title-large);
+}
+
+.company {
+  margin: 4px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.progress-slot {
+  height: 4px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px 32px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px 24px;
+  margin: 0 0 8px;
+
+  dt {
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 2px 0 0;
+  }
+}
+
+section {
+  margin-top: 24px;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font: var(--mat-sys-title-small);
+}
+
+/* Untrusted text is always rendered as plain text, never HTML. */
+.text {
+  white-space: pre-line;
+  margin: 8px 0;
+}
+
+.email-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: var(--mat-sys-body-small);
+  background: var(--mat-sys-surface-container);
+  padding: 12px;
+  border-radius: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.small {
+  font: var(--mat-sys-body-small);
+}
+
+.url {
+  word-break: break-all;
+}
+
+.source-id {
+  margin-left: 4px;
+}

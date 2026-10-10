@@ -1,0 +1,64 @@
+<mat-sidenav-container class="container" (backdropClick)="closePanel()">
+  <mat-sidenav
+    class="details-sidenav"
+    position="start"
+    mode="over"
+    [opened]="panelOpen()"
+    [class.full-width]="isHandset()"
+    (closedStart)="closePanel()"
+  >
+    <app-job-details-panel
+      [job]="store.selectedJob.value()"
+      [loading]="store.selectedJob.isLoading()"
+      (closed)="closePanel()"
+      (statusChange)="changeJobStatus($event)"
+    />
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <div class="page-header">
+      <div>
+        <h1>Jobs</h1>
+        <p class="subtitle">Job opportunities extracted from your notification emails.</p>
+      </div>
+      <div class="header-actions">
+        <button mat-stroked-button (click)="refresh()" [disabled]="store.jobs.isLoading()">
+          <mat-icon>refresh</mat-icon> Refresh
+        </button>
+        <!-- Gmail synchronisation is implemented in Phase 2. -->
+        <span matTooltip="Gmail synchronisation arrives in Phase 2">
+          <button mat-flat-button disabled><mat-icon>sync</mat-icon> Sync jobs</button>
+        </span>
+      </div>
+    </div>
+
+    <app-job-filters
+      [counts]="store.counts.value()"
+      [sources]="store.sources.value()"
+      (statusChange)="changeStatusFilter($event)"
+    />
+
+    @if (store.jobs.error()) {
+      <div class="error" role="alert">
+        <mat-icon>error_outline</mat-icon>
+        <span>Jobs could not be loaded.</span>
+        <button mat-button (click)="refresh()">Try again</button>
+      </div>
+    }
+
+    <app-job-table
+      [jobs]="page()?.items ?? []"
+      [totalCount]="page()?.totalCount ?? 0"
+      [page]="store.query().page"
+      [pageSize]="store.query().pageSize"
+      [sortBy]="store.query().sortBy"
+      [sortDirection]="store.query().sortDirection"
+      [loading]="store.jobs.isLoading()"
+      [selectedJobId]="store.selectedJobId()"
+      (rowClick)="openJob($event)"
+      (statusChange)="changeJobStatus($event)"
+      (pageChange)="store.setPage($event.page, $event.pageSize)"
+      (sortChange)="store.setSort($event.sortBy, $event.sortDirection)"
+    />
+  </mat-sidenav-content>
+</mat-sidenav-container>

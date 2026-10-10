@@ -1,0 +1,173 @@
+<div class="table-wrap">
+  <div class="progress-slot">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  <table
+    mat-table
+    matSort
+    [dataSource]="jobs()"
+    [matSortActive]="activeSort()"
+    [matSortDirection]="sortDirection() === 'Asc' ? 'asc' : 'desc'"
+    (matSortChange)="onSort($event)"
+    [class.compact]="compact()"
+  >
+    <ng-container matColumnDef="receivedAt">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header start="desc">Received</th>
+      <td mat-cell *matCellDef="let job" class="nowrap">
+        <span [matTooltip]="(job.receivedAt | date: 'medium') ?? ''">{{
+          job.receivedAt | date: 'd MMM, HH:mm'
+        }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="title">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header start="asc">Job title</th>
+      <td mat-cell *matCellDef="let job" class="title-cell">
+        <span class="title">{{ job.title }}</span>
+        @if (compact()) {
+          <span class="secondary"
+            >{{ job.company ?? 'Company not specified' }} ·
+            {{ job.receivedAt | date: 'd MMM' }}</span
+          >
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="company">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header start="asc">Company</th>
+      <td mat-cell *matCellDef="let job">
+        @if (job.company) {
+          {{ job.company }}
+        } @else {
+          <span class="muted">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="salary">
+      <th mat-header-cell *matHeaderCellDef>Salary</th>
+      <td mat-cell *matCellDef="let job">
+        @if (job.salaryText) {
+          {{ job.salaryText }}
+        } @else {
+          <span class="muted">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="location">
+      <th mat-header-cell *matHeaderCellDef>Location</th>
+      <td mat-cell *matCellDef="let job">
+        @if (job.location) {
+          {{ job.location }}
+        } @else {
+          <span class="muted">—</span>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="source">
+      <th mat-header-cell *matHeaderCellDef>Source</th>
+      <td mat-cell *matCellDef="let job">{{ job.source }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let job"><app-job-status-chip [status]="job.status" /></td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef class="actions-cell">
+        <span class="cdk-visually-hidden">Actions</span>
+      </th>
+      <td mat-cell *matCellDef="let job" class="actions-cell nowrap">
+        @if (!compact()) {
+          @if (job.status !== 'Applied') {
+            <button
+              mat-icon-button
+              matTooltip="Mark as applied"
+              aria-label="Mark as applied"
+              (click)="setStatus($event, job, 'Applied')"
+            >
+              <mat-icon>task_alt</mat-icon>
+            </button>
+          }
+          @if (job.status !== 'NotRelevant') {
+            <button
+              mat-icon-button
+              matTooltip="Mark as not relevant"
+              aria-label="Mark as not relevant"
+              (click)="setStatus($event, job, 'NotRelevant')"
+            >
+              <mat-icon>block</mat-icon>
+            </button>
+          }
+        }
+        <button
+          mat-icon-button
+          [matMenuTriggerFor]="menu"
+          aria-label="More actions"
+          (click)="stop($event)"
+        >
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          <!-- Auto Apply is implemented in Phase 4 (AI application agent). -->
+          <button mat-menu-item disabled>
+            <mat-icon>smart_toy</mat-icon>
+            <span>Auto apply (coming in Phase 4)</span>
+          </button>
+          @if (job.status !== 'Applied') {
+            <button mat-menu-item (click)="setStatus($event, job, 'Applied')">
+              <mat-icon>task_alt</mat-icon><span>Mark as applied</span>
+            </button>
+          }
+          @if (job.status !== 'NotRelevant') {
+            <button mat-menu-item (click)="setStatus($event, job, 'NotRelevant')">
+              <mat-icon>block</mat-icon><span>Mark as not relevant</span>
+            </button>
+          }
+          @if (job.status !== 'New') {
+            <button mat-menu-item (click)="setStatus($event, job, 'New')">
+              <mat-icon>undo</mat-icon><span>Move back to New</span>
+            </button>
+          }
+        </mat-menu>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columns(); sticky: true"></tr>
+    <tr
+      mat-row
+      *matRowDef="let job; columns: columns()"
+      class="job-row"
+      [class.selected]="job.id === selectedJobId()"
+      tabindex="0"
+      [attr.aria-label]="'Open details for ' + job.title"
+      (click)="rowClick.emit(job)"
+      (keydown.enter)="rowClick.emit(job)"
+    ></tr>
+
+    <tr class="mat-mdc-row" *matNoDataRow>
+      <td class="empty" [attr.colspan]="columns().length">
+        @if (!loading()) {
+          <mat-icon>inbox</mat-icon>
+          <p>No jobs match the current filters.</p>
+        }
+      </td>
+    </tr>
+  </table>
+
+  <mat-paginator
+    [length]="totalCount()"
+    [pageIndex]="page() - 1"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="pageSizeOptions"
+    showFirstLastButtons
+    aria-label="Select page of jobs"
+    (page)="onPage($event)"
+  />
+</div>

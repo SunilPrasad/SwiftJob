@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SwiftJob.Api/SwiftJob.Api.csproj" />
+    <Project Path="src/SwiftJob.Application/SwiftJob.Application.csproj" />
+    <Project Path="src/SwiftJob.Domain/SwiftJob.Domain.csproj" />
+    <Project Path="src/SwiftJob.Infrastructure/SwiftJob.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SwiftJob.Tests/SwiftJob.Tests.csproj" />
+  </Folder>
+</Solution>
