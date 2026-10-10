@@ -3,6 +3,7 @@ using SwiftJob.Api.Infrastructure;
 using SwiftJob.Api.Sync;
 using SwiftJob.Application;
 using SwiftJob.Infrastructure;
+using SwiftJob.Application.Browser;
 using SwiftJob.Application.Sync;
 using SwiftJob.Infrastructure.Persistence;
 
@@ -32,6 +33,7 @@ builder.Services
     .AddInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 
 builder.Services.AddSingleton<ISyncStatusPublisher, SignalRSyncStatusPublisher>();
+builder.Services.AddSingleton<IBrowserStatusPublisher, SignalRBrowserStatusPublisher>();
 builder.Services.AddSingleton<GmailSyncWorker>();
 builder.Services.AddSingleton<ISyncTrigger>(sp => sp.GetRequiredService<GmailSyncWorker>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GmailSyncWorker>());

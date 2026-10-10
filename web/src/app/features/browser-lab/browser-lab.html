@@ -1,0 +1,96 @@
+<div class="page">
+  <h1>Browser lab <span class="badge">prototype</span></h1>
+  <p class="intro">
+    Try the SwiftJob browser and the AI form filler on a <strong>local sample job form</strong>. A
+    real browser window opens next to this page; nothing is submitted anywhere. The AI uses a
+    <strong>fictional demo applicant</strong> (your real profile comes in Phase 3).
+  </p>
+
+  <mat-card appearance="outlined">
+    <mat-card-content>
+      <div class="status" [class]="'status ' + (status()?.controller ?? 'None')">
+        <mat-icon>
+          {{
+            aiWorking()
+              ? 'smart_toy'
+              : status()?.controller === 'User'
+                ? 'pan_tool'
+                : isOpen()
+                  ? 'web'
+                  : 'web_asset_off'
+          }}
+        </mat-icon>
+        <div>
+          <strong>
+            @switch (status()?.controller) {
+              @case ('Agent') {
+                AI is working
+              }
+              @case ('User') {
+                You have control
+              }
+              @default {
+                {{ isOpen() ? 'Browser open' : 'Browser closed' }}
+              }
+            }
+          </strong>
+          <span class="muted">{{ status()?.message ?? 'Browser not started.' }}</span>
+          @if (status()?.currentUrl; as url) {
+            <span class="muted url">{{ url }}</span>
+          }
+        </div>
+      </div>
+
+      <h3>1. Try the browser yourself</h3>
+      <div class="actions">
+        <button mat-stroked-button (click)="openSample()" [disabled]="busy() || aiWorking()">
+          <mat-icon>open_in_browser</mat-icon> Open sample job form
+        </button>
+        <button mat-button (click)="close()" [disabled]="busy() || !isOpen()">
+          <mat-icon>close</mat-icon> Close browser
+        </button>
+      </div>
+      <p class="muted small">
+        The first start can take up to a minute (Playwright is downloaded once). Type in the window
+        like any browser. Logins you make there are remembered in SwiftJob's own browser profile.
+      </p>
+
+      <h3>2. Let the AI fill the form</h3>
+      <div class="actions">
+        <button mat-flat-button (click)="aiFill()" [disabled]="busy() || aiWorking()">
+          <mat-icon>smart_toy</mat-icon> AI fill (demo)
+        </button>
+        <button mat-stroked-button (click)="takeControl()" [disabled]="busy() || !aiWorking()">
+          <mat-icon>pan_tool</mat-icon> Take control
+        </button>
+        <button
+          mat-stroked-button
+          (click)="resume()"
+          [disabled]="busy() || aiWorking() || !isOpen()"
+        >
+          <mat-icon>play_arrow</mat-icon> Resume AI
+        </button>
+        <button mat-button (click)="stop()" [disabled]="busy() || !aiWorking()">
+          <mat-icon>stop</mat-icon> Stop AI
+        </button>
+      </div>
+      <ul class="muted small">
+        <li>Demo applicant: Alex Demo · alex.demo@example.com · +44 7700 900123 · Demo_CV.pdf</li>
+        <li>
+          The AI can only read the page and fill fields. It can't open other sites or run scripts.
+        </li>
+        <li>
+          <strong>It can never submit.</strong> Clicks on Submit/Apply/Send are blocked; submitting
+          is always yours.
+        </li>
+        <li>
+          Take control stops the AI instantly; type in the window, then Resume and the AI continues
+          from there.
+        </li>
+        <li>Uses the AI model from Settings → AI model.</li>
+      </ul>
+    </mat-card-content>
+  </mat-card>
+
+  <app-activity-log class="log" />
+</div>

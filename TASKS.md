@@ -102,6 +102,18 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Activity log on the Jobs page: live view of each sync step, per-email result and timing, warnings and errors
 - [x] Tests: URL canonicalisation, source detection, email text/link extraction, importer/dedup, sync idempotency and retries, Gmail parser, AI settings, Agent Framework extractor with a scripted model, API endpoints, Angular AI settings and sync status
 
+## Prototype — SwiftJob browser & AI form filling ✅
+- [x] SwiftJob browser: visible Chromium window controlled through Microsoft **Playwright MCP** (started by the backend via the MCP C# SDK)
+- [x] Chrome → Edge → Playwright Chromium fallback; private persistent profile so job-site logins are remembered
+- [x] **Open job posting** opens the job in the SwiftJob browser ("My browser" link kept)
+- [x] Local sample job form (`/demo/job-form`) — nothing is stored or sent anywhere
+- [x] Browser lab page: open sample form, **AI fill (demo)**, **Take control**, **Resume AI**, **Stop AI**, close browser, live status
+- [x] Agent Framework agent with guarded MCP tools: only read/fill tools offered (no navigation, scripts, tabs)
+- [x] Submit protection based on the real element from the page snapshot (not the AI's description); Enter-to-submit disabled
+- [x] One controller at a time: Take control cancels the AI immediately; Resume re-reads the page and continues
+- [x] Activity log shows every AI browser action; browser status pushed over SignalR
+- [x] Tests: guard rules, snapshot tracker, URL validation, demo CV; opt-in end-to-end test with a real browser (fills fields, attaches CV, submit blocked, zero submissions)
+
 ## Phase 3 — Candidate Profile
 - [ ] Profile API (personal, contact, summary, skills, work authorisation, preferences)
 - [ ] Work history and education management

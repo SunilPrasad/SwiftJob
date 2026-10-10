@@ -6,10 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SwiftJob.Application.Abstractions;
 using SwiftJob.Application.Ai;
+using SwiftJob.Application.Browser;
 using SwiftJob.Application.Extraction;
 using SwiftJob.Application.Gmail;
 using SwiftJob.Application.Sync;
 using SwiftJob.Infrastructure.Ai;
+using SwiftJob.Infrastructure.Browser;
 using SwiftJob.Infrastructure.Gmail;
 using SwiftJob.Infrastructure.Persistence;
 using SwiftJob.Infrastructure.Persistence.Seeding;
@@ -39,6 +41,7 @@ public static class DependencyInjection
         AddSecretProtection(services, configuration, contentRootPath);
         AddGmail(services, configuration);
         AddAi(services);
+        AddBrowser(services, configuration, contentRootPath);
 
         return services;
     }
@@ -69,6 +72,19 @@ public static class DependencyInjection
         services.AddSingleton<GoogleGmailClient>();
         services.AddSingleton<IGmailOAuthClient>(sp => sp.GetRequiredService<GoogleGmailClient>());
         services.AddSingleton<IGmailMailbox>(sp => sp.GetRequiredService<GoogleGmailClient>());
+    }
+
+    private static void AddBrowser(IServiceCollection services, IConfiguration configuration, string contentRootPath)
+    {
+        var section = configuration.GetSection(BrowserOptions.SectionName);
+        services.Configure<BrowserOptions>(section);
+        var options = section.Get<BrowserOptions>() ?? new BrowserOptions();
+        services.AddSingleton(new BrowserPaths(
+            Path.GetFullPath(Path.Combine(contentRootPath, options.ProfilePath)),
+            Path.GetFullPath(Path.Combine(contentRootPath, options.WorkspacePath))));
+        services.AddSingleton<PlaywrightMcpBrowser>();
+        services.AddSingleton<IBrowserSessionService>(sp => sp.GetRequiredService<PlaywrightMcpBrowser>());
+        services.AddSingleton<IFormFillAgent, FormFillAgent>();
     }
 
     private static void AddAi(IServiceCollection services)

@@ -13,5 +13,10 @@ export const routes: Routes = [
     title: 'Settings · SwiftJob',
     loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
   },
+  {
+    path: 'browser-lab',
+    title: 'Browser lab · SwiftJob',
+    loadComponent: () => import('./features/browser-lab/browser-lab').then((m) => m.BrowserLab),
+  },
   { path: '**', redirectTo: 'jobs' },
 ];

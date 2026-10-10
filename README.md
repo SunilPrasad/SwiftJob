@@ -37,6 +37,13 @@ AI browser agent — which you can watch, pause and take over — to help comple
 * **Settings → AI model**: choose the provider (Anthropic, OpenAI, or an OpenAI-compatible endpoint such as Ollama,
   OpenRouter, Groq, Mistral or Gemini), any model id and the API key (stored encrypted); **Test model** checks it.
 * **Settings → Sample data**: remove the development demo jobs once real jobs arrive.
+* **Open job posting** (details panel) opens the job in the **SwiftJob browser**: a normal, visible browser window
+  controlled through Microsoft's **Playwright MCP**. It is the same browser the AI will use for applications; logins
+  are remembered in a private profile (`App_Data/browser-profile`). "My browser" still opens your usual browser.
+* **Browser lab (prototype)**: open a local sample job form and let the AI fill it with a fictional demo applicant
+  (Microsoft Agent Framework agent + guarded Playwright MCP tools). **Take control** stops the AI instantly,
+  **Resume** continues from the page as it is. The AI can only read the page and fill fields, and can never submit:
+  submit/apply/send clicks are blocked by checking the actual element in the page snapshot.
 * Automated tests: 123 .NET tests (domain, services on real SQLite, Gmail connection and sync, URL canonicalisation, de-duplication, the Agent Framework extractor against a scripted model, HTTP integration) and
   43 Angular tests (API clients, signal store, details panel, split resizer, Gmail and AI settings, sync status, activity log, helpers).
 
@@ -45,6 +52,7 @@ AI browser agent — which you can watch, pause and take over — to help comple
 | Tool | Version |
 |------|---------|
 | .NET SDK | 10.0 |
+| Google Chrome or Microsoft Edge | any recent version (used by the SwiftJob browser; or `npx playwright install chromium`) |
 | Node.js | 24 LTS (≥ 24.15) or 22 (≥ 22.22.3) — required by Angular CLI 22 |
 | npm | 10+ |
 
@@ -81,6 +89,9 @@ Open `SwiftJob.slnx`, set `SwiftJob.Api` as the startup project and run the `htt
 ```bash
 dotnet test                         # backend
 cd web && npx ng test --watch=false # frontend
+
+# Optional end-to-end browser test (needs Node.js and Chrome/Edge): real Playwright MCP + real browser
+SWIFTJOB_BROWSER_TESTS=1 dotnet test --filter FormFillAgentIntegrationTests
 ```
 
 ## Configuration
@@ -95,6 +106,9 @@ cd web && npx ng test --watch=false # frontend
 | `Gmail:RedirectUri` | `http://localhost:5080/api/settings/gmail/callback` | OAuth redirect; must match the Google OAuth client |
 | `Gmail:FrontendUrl` | `http://localhost:4200` | Where the browser returns after Google sign-in |
 | `DataProtection:KeysPath` | `App_Data/keys` | Encryption keys for stored secrets (keep private, back up with the database) |
+| `Browser:Channels` | `["chrome","msedge","chromium"]` | Browsers tried in order for the SwiftJob browser |
+| `Browser:ExecutablePath` | – | Use a specific browser executable instead |
+| `Browser:Headless` | `false` | Run the browser without a window (tests only) |
 | `Sync:DownloadConcurrency` | `5` | Emails downloaded from Gmail in parallel |
 | `Sync:ExtractionConcurrency` | `4` | Emails sent to the AI model in parallel (lower it if the provider rate-limits) |
 | `Cors:AllowedOrigins` | `["http://localhost:4200"]` | Origins allowed to call the API directly |
@@ -159,7 +173,12 @@ dotnet ef migrations add <Name> \
 | POST | `/api/sync` | Start a sync in the background (`202`, or `409` if one is running) |
 | GET | `/api/sync/status` | Latest sync status |
 | GET | `/api/sync/log` | Recent activity-log lines (also pushed live as `syncLog`) |
-| WS | `/hubs/sync` | SignalR hub pushing `syncStatus` events |
+| WS | `/hubs/sync` | SignalR hub pushing `syncStatus`, `syncLog` and `browserStatus` events |
+| GET | `/api/browser/status` | SwiftJob browser: open/closed, URL, who has control |
+| POST | `/api/browser/open-job/{jobId}` | Open a job's application link in the SwiftJob browser |
+| POST | `/api/browser/demo/open`, `/api/browser/demo/fill` | Prototype: open the sample form / let the AI fill it |
+| POST | `/api/browser/agent/take-control`, `/resume`, `/stop` | Control the AI |
+| POST | `/api/browser/close` | Close the browser |
 
 Errors use RFC 7807 problem details (`404` unknown id, `400` invalid input, `409` conflicts with current state, `502` Google API failures).
 

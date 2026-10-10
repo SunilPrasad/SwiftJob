@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { Observable, Subject } from 'rxjs';
+import { BrowserStatus } from '../models/browser';
 import { SyncLogEntry, SyncStatus } from '../models/sync';
 
 const MAX_LOG_ENTRIES = 500;
@@ -21,6 +22,9 @@ export class SyncStatusService {
   readonly status = signal<SyncStatus | null>(null);
   readonly isRunning = computed(() => this.status()?.state === 'Running');
   readonly connected = signal(false);
+
+  /** The SwiftJob browser window: open/closed and who controls it (AI or you). */
+  readonly browser = signal<BrowserStatus | null>(null);
 
   /** Background activity log, oldest first (kept by the API in memory, newest 500 lines). */
   readonly log = signal<SyncLogEntry[]>([]);
@@ -44,6 +48,7 @@ export class SyncStatusService {
       .build();
     this.connection.on('syncStatus', (status: SyncStatus) => this.update(status));
     this.connection.on('syncLog', (entry: SyncLogEntry) => this.appendLog([entry]));
+    this.connection.on('browserStatus', (status: BrowserStatus) => this.browser.set(status));
     this.connection.onreconnected(() => {
       this.connected.set(true);
       this.loadLog(); // catch up on lines missed while disconnected
@@ -54,6 +59,10 @@ export class SyncStatusService {
       .then(() => this.connected.set(true))
       .catch(() => this.refresh());
     this.loadLog();
+    this.http.get<BrowserStatus>('/api/browser/status').subscribe({
+      next: (s) => this.browser.set(s),
+      error: () => undefined,
+    });
   }
 
   /** Fetches the recent activity log (merged with lines already received live). */

@@ -101,3 +101,9 @@ h3 {
 .source-id {
   margin-left: 4px;
 }
+
+.link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

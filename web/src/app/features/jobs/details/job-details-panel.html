@@ -103,9 +103,23 @@
     <section>
       <h3>Links</h3>
       @if (applicationUrl(); as url) {
-        <a mat-stroked-button [href]="url" target="_blank" rel="noopener noreferrer">
-          <mat-icon>open_in_new</mat-icon> Open job posting
-        </a>
+        <div class="link-actions">
+          <button mat-flat-button (click)="openInSwiftJobBrowser(job)" [disabled]="opening()">
+            <mat-icon>open_in_browser</mat-icon> Open job posting
+          </button>
+          <a
+            mat-button
+            [href]="url"
+            target="_blank"
+            rel="noopener noreferrer"
+            matTooltip="Open in your normal browser instead"
+          >
+            <mat-icon>open_in_new</mat-icon> My browser
+          </a>
+        </div>
+        <p class="muted small">
+          Opens in the SwiftJob browser window, which the AI will be able to use for applications.
+        </p>
         <p class="muted small url">{{ url }}</p>
       } @else {
         <p class="muted">No valid application link was found.</p>

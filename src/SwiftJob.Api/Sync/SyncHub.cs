@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using SwiftJob.Application.Browser;
 using SwiftJob.Application.Sync;
 
 namespace SwiftJob.Api.Sync;
@@ -9,6 +10,7 @@ public sealed class SyncHub(ISyncStatusPublisher status) : Hub
     public const string Path = "/hubs/sync";
     public const string StatusMethod = "syncStatus";
     public const string LogMethod = "syncLog";
+    public const string BrowserStatusMethod = "browserStatus";
 
     /// <summary>Sends the latest status as soon as a client connects.</summary>
     public override async Task OnConnectedAsync()
@@ -70,4 +72,9 @@ internal sealed class SignalRSyncStatusPublisher(
             logger.LogDebug(ex, "Could not broadcast a sync log entry");
         }
     }
+}
+
+internal sealed class SignalRBrowserStatusPublisher(IHubContext<SyncHub> hub) : IBrowserStatusPublisher
+{
+    public Task PublishAsync(BrowserStatusDto status) => hub.Clients.All.SendAsync(SyncHub.BrowserStatusMethod, status);
 }

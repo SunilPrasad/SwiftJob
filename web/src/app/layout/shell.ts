@@ -20,6 +20,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
       <a routerLink="/jobs" class="brand"><mat-icon>bolt</mat-icon><span>SwiftJob</span></a>
       <nav class="nav">
         <a mat-button routerLink="/jobs" routerLinkActive="active">Jobs</a>
+        <a mat-button routerLink="/browser-lab" routerLinkActive="active">Browser lab</a>
         <a mat-button routerLink="/settings" routerLinkActive="active">Settings</a>
       </nav>
     </mat-toolbar>

@@ -17,7 +17,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { finalize } from 'rxjs';
+import { BrowserApi } from '../../../core/api/browser-api';
 import { EmailsApi } from '../../../core/api/emails-api';
 import { JobDetail, JobStatus, WORK_MODE_LABELS } from '../../../core/models/job';
 import { safeExternalUrl } from '../../../shared/external-url';
@@ -43,6 +46,10 @@ import { JobStatusChip } from '../shared/job-status-chip';
 })
 export class JobDetailsPanel {
   private readonly emailsApi = inject(EmailsApi);
+  private readonly browserApi = inject(BrowserApi);
+  private readonly snackBar = inject(MatSnackBar);
+
+  protected readonly opening = signal(false);
 
   readonly job = input<JobDetail | undefined>();
   readonly loading = input(false);
@@ -68,6 +75,21 @@ export class JobDetailsPanel {
       this.jobId();
       untracked(() => this.openEmailId.set(null));
     });
+  }
+
+  /** Opens the job in the SwiftJob-controlled browser window (the same browser the AI will use). */
+  protected openInSwiftJobBrowser(job: JobDetail): void {
+    this.opening.set(true);
+    this.browserApi
+      .openJob(job.id)
+      .pipe(finalize(() => this.opening.set(false)))
+      .subscribe({
+        next: () =>
+          this.snackBar.open('Opened in the SwiftJob browser window', undefined, {
+            duration: 3000,
+          }),
+        error: () => undefined, // reported by apiErrorInterceptor
+      });
   }
 
   protected setStatus(job: JobDetail, status: JobStatus): void {
