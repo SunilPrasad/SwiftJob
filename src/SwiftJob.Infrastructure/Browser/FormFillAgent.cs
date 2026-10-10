@@ -50,11 +50,11 @@ internal sealed class FormFillAgent(
     private CancellationTokenSource? _run;
     private Task? _runTask;
 
-    public async Task StartDemoAsync(CancellationToken cancellationToken)
+    public async Task StartDemoAsync(WindowPlacement? placement, CancellationToken cancellationToken)
     {
         EnsureNotRunning();
         EnsureDemoCv();
-        await browser.OpenAsync(options.Value.DemoFormUrl, cancellationToken);
+        await browser.OpenAsync(options.Value.DemoFormUrl, placement, cancellationToken);
         await activity.LogAsync(SyncLogLevel.Info, "AI: starting to fill the sample form with demo applicant data.");
         Start(BuildDemoPrompt(resuming: false));
     }

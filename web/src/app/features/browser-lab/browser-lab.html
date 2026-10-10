@@ -46,10 +46,19 @@
         <button mat-stroked-button (click)="openSample()" [disabled]="busy() || aiWorking()">
           <mat-icon>open_in_browser</mat-icon> Open sample job form
         </button>
+        <button mat-stroked-button (click)="arrange()" [disabled]="busy() || aiWorking()">
+          <mat-icon>splitscreen_right</mat-icon> Place beside SwiftJob
+        </button>
         <button mat-button (click)="close()" [disabled]="busy() || !isOpen()">
           <mat-icon>close</mat-icon> Close browser
         </button>
       </div>
+      <p class="tip">
+        <mat-icon inline>lightbulb</mat-icon>
+        The browser opens on the <strong>right half</strong> of your screen. Snap SwiftJob to the
+        left half (<kbd>Windows</kbd> + <kbd>←</kbd>) to see both side by side. If the browser was
+        already open, click <em>Place beside SwiftJob</em>.
+      </p>
       <p class="muted small">
         The first start can take up to a minute (Playwright is downloaded once). Type in the window
         like any browser. Logins you make there are remembered in SwiftJob's own browser profile.

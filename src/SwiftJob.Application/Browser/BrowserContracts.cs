@@ -27,10 +27,16 @@ public interface IBrowserSessionService
 {
     BrowserStatusDto Status { get; }
 
-    /// <summary>Opens <paramref name="url"/> in the SwiftJob browser, starting it if necessary.</summary>
+    /// <summary>
+    /// Opens <paramref name="url"/> in the SwiftJob browser, starting it if necessary. A new browser window is
+    /// placed at <paramref name="placement"/> (e.g. the right half of the screen); an open window is not moved.
+    /// </summary>
     /// <exception cref="ArgumentException">The URL is not an absolute http(s) URL.</exception>
     /// <exception cref="Common.ExternalServiceException">The browser could not be started or navigated.</exception>
-    Task OpenAsync(string url, CancellationToken cancellationToken);
+    Task OpenAsync(string url, WindowPlacement? placement, CancellationToken cancellationToken);
+
+    /// <summary>Moves the browser window to <paramref name="placement"/> by reopening it (the page and logins are kept).</summary>
+    Task ArrangeAsync(WindowPlacement placement, CancellationToken cancellationToken);
 
     Task CloseAsync(CancellationToken cancellationToken);
 }
@@ -42,7 +48,7 @@ public interface IBrowserSessionService
 public interface IFormFillAgent
 {
     /// <summary>Opens the local sample job form and starts filling it with demo applicant data.</summary>
-    Task StartDemoAsync(CancellationToken cancellationToken);
+    Task StartDemoAsync(WindowPlacement? placement, CancellationToken cancellationToken);
 
     /// <summary>Stops the AI immediately and gives control to the user (browser state is kept).</summary>
     Task TakeControlAsync();
@@ -52,6 +58,16 @@ public interface IFormFillAgent
 
     /// <summary>Stops the AI; the browser stays open.</summary>
     Task StopAsync();
+}
+
+/// <summary>Where the browser window should appear, in screen pixels (typically the right half of the screen).</summary>
+public sealed record WindowPlacement(int X, int Y, int Width, int Height)
+{
+    /// <summary>Rejects nonsensical sizes so a bad request cannot produce an invisible window.</summary>
+    public WindowPlacement Validated() =>
+        Width is >= 400 and <= 10_000 && Height is >= 300 and <= 10_000 && X is > -20_000 and < 20_000 && Y is > -20_000 and < 20_000
+            ? this
+            : throw new ArgumentException("The window placement is out of range.");
 }
 
 /// <summary>Clearly fictional applicant used only with the local sample form in the prototype.</summary>

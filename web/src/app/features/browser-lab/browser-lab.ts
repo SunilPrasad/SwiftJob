@@ -52,6 +52,10 @@ export class BrowserLab {
     this.run(this.api.stop());
   }
 
+  protected arrange(): void {
+    this.run(this.api.arrange());
+  }
+
   protected close(): void {
     this.run(this.api.close());
   }

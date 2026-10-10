@@ -26,13 +26,19 @@ internal sealed partial class PlaywrightMcpBrowser(
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private McpClient? _client;
     private int _channelIndex;
+    private WindowPlacement? _placement;
     private volatile BrowserStatusDto _status = new(false, null, BrowserOwner.None, "Browser not started.");
 
     public BrowserStatusDto Status => _status;
 
-    public async Task OpenAsync(string url, CancellationToken cancellationToken)
+    public async Task OpenAsync(string url, WindowPlacement? placement, CancellationToken cancellationToken)
     {
         var uri = BrowserUrl.Validate(url);
+        if (placement is not null && _client is null)
+        {
+            _placement = placement.Validated(); // applies when the browser window is created
+        }
+
         await activity.LogAsync(SyncLogLevel.Info, $"Browser: opening {uri.Host}…");
 
         var result = await CallToolAsync("browser_navigate", new Dictionary<string, object?> { ["url"] = uri.ToString() }, cancellationToken);
@@ -40,6 +46,21 @@ internal sealed partial class PlaywrightMcpBrowser(
         await SetStatusAsync(new BrowserStatusDto(true, currentUrl, _status.Controller == BrowserOwner.Agent
             ? BrowserOwner.Agent : BrowserOwner.User, "Page open in the SwiftJob browser window."));
         await activity.LogAsync(SyncLogLevel.Info, $"Browser: opened {currentUrl}");
+    }
+
+    public async Task ArrangeAsync(WindowPlacement placement, CancellationToken cancellationToken)
+    {
+        _placement = placement.Validated();
+        var url = _status.IsOpen ? _status.CurrentUrl : null;
+
+        // Window position is a launch setting, so the browser is reopened; the profile keeps logins.
+        await ResetClientAsync();
+        if (url is not null)
+        {
+            await OpenAsync(url, null, cancellationToken);
+        }
+
+        await activity.LogAsync(SyncLogLevel.Info, "Browser: placed beside SwiftJob.");
     }
 
     public async Task CloseAsync(CancellationToken cancellationToken)
@@ -154,6 +175,8 @@ internal sealed partial class PlaywrightMcpBrowser(
                 arguments.Add("--headless");
             }
 
+            arguments.AddRange(["--config", WriteLaunchConfig()]);
+
             arguments.AddRange(o.ExtraArguments);
 
             // npx is a script on Windows, so it is started through cmd.exe there.
@@ -183,6 +206,29 @@ internal sealed partial class PlaywrightMcpBrowser(
         {
             _startLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Writes the Playwright MCP config: window position/size (when known) and a viewport that follows the
+    /// window, so pages fill the window like a normal browser.
+    /// </summary>
+    private string WriteLaunchConfig()
+    {
+        var args = _placement is { } p
+            ? new[] { $"--window-position={p.X},{p.Y}", $"--window-size={p.Width},{p.Height}" }
+            : [];
+        var config = new
+        {
+            browser = new
+            {
+                launchOptions = new { args },
+                contextOptions = new { viewport = (object?)null },
+            },
+        };
+        var path = Path.Combine(paths.Workspace, "playwright-mcp.config.json");
+        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(config,
+            new System.Text.Json.JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never }));
+        return path;
     }
 
     private async Task ResetClientAsync()

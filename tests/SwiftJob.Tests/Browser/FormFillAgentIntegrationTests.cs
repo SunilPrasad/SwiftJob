@@ -53,7 +53,7 @@ public sealed class FormFillAgentIntegrationTests
             new FixedFactory(new ScriptedFormModel()), activity, options, NullLoggerFactory.Instance);
 
 
-        await agent.StartDemoAsync(CancellationToken.None);
+        await agent.StartDemoAsync(new WindowPlacement(100, 50, 900, 700), CancellationToken.None);
         var deadline = DateTime.UtcNow.AddMinutes(3);
         while (!activity.Lines.Any(l => l.StartsWith("AI finished", StringComparison.Ordinal) || l.StartsWith("AI stopped", StringComparison.Ordinal)))
         {
@@ -75,6 +75,13 @@ public sealed class FormFillAgentIntegrationTests
         Assert.Contains(DemoApplicant.CvFileName, attached);
         Assert.DoesNotContain("Application received", snapshot); // never submitted
         Assert.Equal(0, site.Submissions);
+
+        // The window was created at the requested size and the page follows the window size.
+        var size = await browser.CallToolAsync("browser_evaluate", new Dictionary<string, object?>
+        {
+            ["function"] = "() => `${window.outerWidth}x${window.outerHeight}`",
+        }, CancellationToken.None);
+        Assert.Contains("900x700", size);
         Assert.Equal(BrowserOwner.User, browser.Status.Controller);
 
         await browser.CloseAsync(CancellationToken.None);

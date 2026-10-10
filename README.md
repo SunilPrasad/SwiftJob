@@ -40,6 +40,7 @@ AI browser agent — which you can watch, pause and take over — to help comple
 * **Open job posting** (details panel) opens the job in the **SwiftJob browser**: a normal, visible browser window
   controlled through Microsoft's **Playwright MCP**. It is the same browser the AI will use for applications; logins
   are remembered in a private profile (`App_Data/browser-profile`). "My browser" still opens your usual browser.
+  The window opens on the **right half of the screen**; snap SwiftJob to the left half (Windows + ←) to work side by side.
 * **Browser lab (prototype)**: open a local sample job form and let the AI fill it with a fictional demo applicant
   (Microsoft Agent Framework agent + guarded Playwright MCP tools). **Take control** stops the AI instantly,
   **Resume** continues from the page as it is. The AI can only read the page and fill fields, and can never submit:

@@ -112,6 +112,7 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Submit protection based on the real element from the page snapshot (not the AI's description); Enter-to-submit disabled
 - [x] One controller at a time: Take control cancels the AI immediately; Resume re-reads the page and continues
 - [x] Activity log shows every AI browser action; browser status pushed over SignalR
+- [x] Browser window opens on the right half of the screen (side by side with SwiftJob); "Place beside SwiftJob" re-positions it
 - [x] Tests: guard rules, snapshot tracker, URL validation, demo CV; opt-in end-to-end test with a real browser (fills fields, attaches CV, submit blocked, zero submissions)
 
 ## Phase 3 — Candidate Profile

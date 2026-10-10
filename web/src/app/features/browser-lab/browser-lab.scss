@@ -85,3 +85,18 @@ ul {
   padding-left: 20px;
   line-height: 1.6;
 }
+
+.tip {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  font: var(--mat-sys-body-small);
+}
+
+kbd {
+  padding: 0 5px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  font-family: inherit;
+}

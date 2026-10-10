@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { WindowPlacement, rightHalfOfScreen } from '../../shared/window-placement';
 import { BrowserStatus } from '../models/browser';
 
 /** The SwiftJob-controlled browser window (Playwright) and the prototype form-filling AI. */
@@ -13,16 +14,25 @@ export class BrowserApi {
     return this.http.get<BrowserStatus>(`${this.baseUrl}/status`);
   }
 
-  openJob(jobId: number): Observable<BrowserStatus> {
-    return this.http.post<BrowserStatus>(`${this.baseUrl}/open-job/${jobId}`, null);
+  /** A newly opened browser window is placed on the right half of the screen, beside SwiftJob. */
+  openJob(
+    jobId: number,
+    placement: WindowPlacement = rightHalfOfScreen(),
+  ): Observable<BrowserStatus> {
+    return this.http.post<BrowserStatus>(`${this.baseUrl}/open-job/${jobId}`, placement);
   }
 
-  openDemoForm(): Observable<BrowserStatus> {
-    return this.http.post<BrowserStatus>(`${this.baseUrl}/demo/open`, null);
+  openDemoForm(placement: WindowPlacement = rightHalfOfScreen()): Observable<BrowserStatus> {
+    return this.http.post<BrowserStatus>(`${this.baseUrl}/demo/open`, placement);
   }
 
-  startDemoFill(): Observable<BrowserStatus> {
-    return this.http.post<BrowserStatus>(`${this.baseUrl}/demo/fill`, null);
+  startDemoFill(placement: WindowPlacement = rightHalfOfScreen()): Observable<BrowserStatus> {
+    return this.http.post<BrowserStatus>(`${this.baseUrl}/demo/fill`, placement);
+  }
+
+  /** Moves the browser window beside SwiftJob (it is briefly reopened; the page and logins are kept). */
+  arrange(placement: WindowPlacement = rightHalfOfScreen()): Observable<BrowserStatus> {
+    return this.http.post<BrowserStatus>(`${this.baseUrl}/arrange`, placement);
   }
 
   takeControl(): Observable<BrowserStatus> {
