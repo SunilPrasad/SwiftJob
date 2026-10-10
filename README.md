@@ -17,7 +17,7 @@ AI browser agent — which you can watch, pause and take over — to help comple
   * Search by title/company, filter by source, date range and status; server-side paging.
   * Live counts for New / Applied / Not relevant / All (respecting the current search and filters).
   * Mark **Applied** / **Not relevant** from the row or the panel, with **Undo**; move any job back to **New**.
-  * Split view: clicking a job docks the details on the left and keeps the list on the right. Drag the divider
+  * Split view: clicking a job keeps the list on the left and docks the details on the right. Drag the divider
     (or focus it and use the arrow keys) to resize; double-click resets. The width is remembered.
   * Details panel with salary, location, work mode, source, received date, description (original and,
     when present, enriched), requirements, job link and the original email(s) — viewable as plain text or opened in Gmail.

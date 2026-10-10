@@ -1,29 +1,4 @@
 <div class="layout" [class.split]="panelOpen()" [class.handset]="isHandset()">
-  @if (panelOpen()) {
-    <aside
-      class="details"
-      aria-label="Job details"
-      [style.width.px]="isHandset() ? null : detailsWidth()"
-    >
-      <app-job-details-panel
-        [job]="store.selectedJob.value()"
-        [loading]="store.selectedJob.isLoading()"
-        (closed)="closePanel()"
-        (statusChange)="changeJobStatus($event)"
-      />
-    </aside>
-
-    @if (!isHandset()) {
-      <app-split-resizer
-        [width]="detailsWidth()"
-        [min]="minDetailsWidth"
-        [max]="maxDetailsWidth()"
-        (widthChange)="resizeDetails($event)"
-        (reset)="resetDetailsWidth()"
-      />
-    }
-  }
-
   <section class="list" [hidden]="panelOpen() && isHandset()">
     <div class="page-header">
       <div>
@@ -70,4 +45,30 @@
       (sortChange)="store.setSort($event.sortBy, $event.sortDirection)"
     />
   </section>
+
+  @if (panelOpen()) {
+    @if (!isHandset()) {
+      <app-split-resizer
+        pane="after"
+        [width]="detailsWidth()"
+        [min]="minDetailsWidth"
+        [max]="maxDetailsWidth()"
+        (widthChange)="resizeDetails($event)"
+        (reset)="resetDetailsWidth()"
+      />
+    }
+
+    <aside
+      class="details"
+      aria-label="Job details"
+      [style.width.px]="isHandset() ? null : detailsWidth()"
+    >
+      <app-job-details-panel
+        [job]="store.selectedJob.value()"
+        [loading]="store.selectedJob.isLoading()"
+        (closed)="closePanel()"
+        (statusChange)="changeJobStatus($event)"
+      />
+    </aside>
+  }
 </div>

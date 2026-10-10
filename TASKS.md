@@ -48,7 +48,7 @@ Legend: `[x]` done · `[ ]` to do
 - [x] Refresh action
 - [x] Left-side job details panel (all fields, description, enriched description tab, requirements,
       job link, original email(s) + Open in Gmail)
-- [x] Details panel docked as a split view (not a pop-up): details on the left, job list on the right
+- [x] Details panel docked as a split view (not a pop-up): job list on the left, details on the right
 - [x] Resizable split: drag the divider, arrow keys (Shift = bigger steps), double-click to reset
 - [x] Chosen panel width remembered between visits
 - [x] Job list stays usable while details are open; table columns adapt to the available width

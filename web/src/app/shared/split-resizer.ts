@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 
 /**
- * Vertical drag handle between two panes. Emits the new width of the pane on its left.
+ * Vertical drag handle between two panes. Emits the new width of the pane it resizes, which sits
+ * either before (left of) or after (right of) the handle. The divider always follows the pointer
+ * and the arrow keys move it in the arrow's direction.
  * Supports mouse/touch/pen dragging, arrow keys (Shift = larger steps), Home/End and double-click to reset.
  */
 @Component({
@@ -61,6 +63,8 @@ export class SplitResizer {
   readonly width = input.required<number>();
   readonly min = input(320);
   readonly max = input(1200);
+  /** Which side of the handle the resized pane is on. */
+  readonly pane = input<'before' | 'after'>('before');
 
   readonly widthChange = output<number>();
   readonly reset = output<void>();
@@ -81,7 +85,8 @@ export class SplitResizer {
     this.dragging.set(true);
     document.body.style.userSelect = 'none';
 
-    const move = (e: PointerEvent) => this.emit(startWidth + (e.clientX - startX));
+    const move = (e: PointerEvent) =>
+      this.emit(startWidth + (e.clientX - startX) * this.direction());
     const end = () => {
       this.dragging.set(false);
       document.body.style.userSelect = '';
@@ -95,7 +100,7 @@ export class SplitResizer {
   }
 
   protected onKeyDown(event: KeyboardEvent): void {
-    const step = event.shiftKey ? 80 : 20;
+    const step = (event.shiftKey ? 80 : 20) * this.direction();
     const target =
       event.key === 'ArrowLeft'
         ? this.width() - step
@@ -110,6 +115,11 @@ export class SplitResizer {
       event.preventDefault();
       this.emit(target);
     }
+  }
+
+  /** +1 when moving the divider right grows the pane, -1 when it shrinks it. */
+  private direction(): number {
+    return this.pane() === 'before' ? 1 : -1;
   }
 
   private emit(width: number): void {
