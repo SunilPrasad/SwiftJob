@@ -7,7 +7,10 @@ internal sealed class FakeProtector : ISecretProtector
 {
     public string Protect(string plaintext) => "enc:" + new string(plaintext.Reverse().ToArray());
 
-    public string Unprotect(string protectedValue) => new(protectedValue["enc:".Length..].Reverse().ToArray());
+    public string Unprotect(string protectedValue) =>
+        protectedValue.StartsWith("enc:", StringComparison.Ordinal)
+            ? new(protectedValue["enc:".Length..].Reverse().ToArray())
+            : throw new System.Security.Cryptography.CryptographicException("The payload was invalid.");
 }
 
 internal sealed class FakeStateStore : IOAuthStateStore

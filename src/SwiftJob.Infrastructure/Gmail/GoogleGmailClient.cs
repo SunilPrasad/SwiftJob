@@ -143,6 +143,14 @@ internal sealed class GoogleGmailClient : IGmailOAuthClient, IGmailMailbox
             var reason = ex.Error?.Message ?? ex.Message;
             throw new ExternalServiceException($"The Gmail API returned an error: {reason}", ex);
         }
+        catch (HttpRequestException ex)
+        {
+            throw new ExternalServiceException($"Could not reach Google: {ex.Message}", ex);
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            throw new ExternalServiceException("The request to Google timed out.", ex);
+        }
     }
 
     private static GoogleAuthorizationCodeFlow CreateFlow(GoogleOAuthClient client) =>

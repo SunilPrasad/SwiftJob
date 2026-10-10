@@ -48,9 +48,15 @@ public sealed class JobSyncService(
         {
             (connection, access) = await gmail.GetAccessAsync(cancellationToken);
         }
-        catch (ConflictException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await Report(SyncState.Failed, ex.Message, 0, 0, 0, startedAt, CancellationToken.None, Now);
+            var message = ex is ConflictException ? ex.Message : $"Unexpected error during sync: {ex.Message}";
+            if (await db.GmailConnections.OrderBy(c => c.Id).FirstOrDefaultAsync(CancellationToken.None) is { } saved)
+            {
+                await RecordFailureAsync(saved, message);
+            }
+
+            await Report(SyncState.Failed, message, 0, 0, 0, startedAt, CancellationToken.None, Now);
             throw;
         }
 
@@ -81,13 +87,33 @@ public sealed class JobSyncService(
             await Report(SyncState.Failed, "Sync was cancelled.", 0, 0, 0, startedAt, CancellationToken.None, Now);
             throw;
         }
-        catch (Exception ex) when (ex is ConflictException or ExternalServiceException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Every failure is recorded and shown to the user; unexpected ones are reported generically.
+            var known = ex is ConflictException or ExternalServiceException;
+            var message = known ? ex.Message : $"Unexpected error during sync: {ex.Message}";
+            if (!known)
+            {
+                logger.LogError(ex, "Unexpected sync failure");
+            }
+
+            await RecordFailureAsync(connection, message);
+            await Report(SyncState.Failed, message, 0, 0, 0, startedAt, CancellationToken.None, Now);
+            throw;
+        }
+    }
+
+    private async Task RecordFailureAsync(GmailConnection connection, string message)
+    {
+        try
         {
             connection.LastSyncCompletedAt = Now;
-            connection.LastSyncError = ex.Message;
+            connection.LastSyncError = Truncate(message, 4000);
             await db.SaveChangesAsync(CancellationToken.None);
-            await Report(SyncState.Failed, ex.Message, 0, 0, 0, startedAt, CancellationToken.None, Now);
-            throw;
+        }
+        catch (Exception saveError)
+        {
+            logger.LogError(saveError, "Could not record the sync failure");
         }
     }
 

@@ -183,6 +183,41 @@ public sealed class JobSyncServiceTests : IAsyncLifetime
         Assert.Contains("not connected", _publisher.Current.Message);
     }
 
+    [Fact]
+    public async Task Unexpected_errors_are_recorded_and_reported_not_swallowed()
+    {
+        AddMessage("a", "Job A");
+        _google.MailboxFailure = new InvalidOperationException("boom");
+        _google.FailListing = true;
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(Sync);
+
+        Assert.Equal("boom", ex.Message);
+        Assert.Equal(SyncState.Failed, _publisher.Current.State);
+        Assert.Contains("Unexpected error during sync: boom", _publisher.Current.Message);
+        await using var db = _database.CreateContext();
+        var connection = await db.GmailConnections.SingleAsync();
+        Assert.Contains("boom", connection.LastSyncError);
+        Assert.NotNull(connection.LastSyncCompletedAt);
+    }
+
+    [Fact]
+    public async Task Undecryptable_credentials_give_a_clear_message()
+    {
+        await using (var db = _database.CreateContext())
+        {
+            var connection = await db.GmailConnections.SingleAsync();
+            connection.ProtectedRefreshToken = "not-encrypted-by-this-machine";
+            await db.SaveChangesAsync();
+        }
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(Sync);
+
+        Assert.Contains("can no longer be decrypted", ex.Message);
+        await using var verify = _database.CreateContext();
+        Assert.Contains("can no longer be decrypted", (await verify.GmailConnections.SingleAsync()).LastSyncError);
+    }
+
     private sealed class FakeExtractor : IJobExtractionService
     {
         public int Calls { get; private set; }

@@ -140,7 +140,15 @@ public sealed class GmailConnectionService(
         var connection = await GetOrCreateAsync(cancellationToken);
         if (connection is { IsConnected: true, HasClientCredentials: true })
         {
-            await TryRevokeAsync(ClientOf(connection), protector.Unprotect(connection.ProtectedRefreshToken!), cancellationToken);
+            try
+            {
+                await TryRevokeAsync(ClientOf(connection), UnprotectStored(connection.ProtectedRefreshToken!), cancellationToken);
+            }
+            catch (ConflictException ex)
+            {
+                // Unreadable token: nothing can be revoked from here; the local copy is still removed.
+                logger.LogWarning(ex, "Skipping token revocation");
+            }
         }
 
         connection.Disconnect();
@@ -174,7 +182,7 @@ public sealed class GmailConnectionService(
             throw new ConflictException("Gmail is not connected. Connect it in Settings.");
         }
 
-        return (connection, new GmailAccess(ClientOf(connection), protector.Unprotect(connection.ProtectedRefreshToken!)));
+        return (connection, new GmailAccess(ClientOf(connection), UnprotectStored(connection.ProtectedRefreshToken!)));
     }
 
     public async Task<GmailTestResultDto> TestConnectionAsync(CancellationToken cancellationToken)
@@ -185,7 +193,7 @@ public sealed class GmailConnectionService(
             throw new ConflictException("Gmail is not connected.");
         }
 
-        var access = new GmailAccess(ClientOf(connection), protector.Unprotect(connection.ProtectedRefreshToken!));
+        var access = new GmailAccess(ClientOf(connection), UnprotectStored(connection.ProtectedRefreshToken!));
         var email = await mailbox.GetEmailAddressAsync(access, cancellationToken);
         var result = await mailbox.SearchAsync(access, connection.SearchQuery, _options.TestPreviewCount, cancellationToken);
         return new GmailTestResultDto(email, connection.SearchQuery, result.EstimatedMatches, result.LatestMessages);
@@ -212,7 +220,22 @@ public sealed class GmailConnectionService(
     }
 
     private GoogleOAuthClient ClientOf(GmailConnection connection) =>
-        new(connection.ClientId!, protector.Unprotect(connection.ProtectedClientSecret!));
+        new(connection.ClientId!, UnprotectStored(connection.ProtectedClientSecret!));
+
+    /// <summary>Stored secrets become unreadable if the encryption keys (App_Data/keys) are lost or replaced.</summary>
+    private string UnprotectStored(string protectedValue)
+    {
+        try
+        {
+            return protector.Unprotect(protectedValue);
+        }
+        catch (System.Security.Cryptography.CryptographicException ex)
+        {
+            throw new ConflictException(
+                "The saved Gmail credentials can no longer be decrypted (the encryption keys in App_Data/keys changed). " +
+                "Disconnect Gmail, save the Client ID and Secret again, and reconnect.", ex);
+        }
+    }
 
     private Task<GmailConnection?> FindAsync(CancellationToken cancellationToken) =>
         db.GmailConnections.OrderBy(c => c.Id).FirstOrDefaultAsync(cancellationToken);

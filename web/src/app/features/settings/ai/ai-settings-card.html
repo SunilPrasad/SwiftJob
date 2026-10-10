@@ -130,5 +130,10 @@
         before it is saved. AI provider usage may incur costs.
       </p>
     </mat-card-content>
+  } @else if (settings.error()) {
+    <mat-card-content>
+      <p>AI settings could not be loaded. Check that the SwiftJob API is running.</p>
+      <button mat-button (click)="settings.reload()">Try again</button>
+    </mat-card-content>
   }
 </mat-card>

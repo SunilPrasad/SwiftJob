@@ -18,6 +18,12 @@ internal sealed class GmailSyncWorker(
     /// <summary>How often the schedule is re-checked when nothing is due.</summary>
     private static readonly TimeSpan ScheduleCheckInterval = TimeSpan.FromMinutes(1);
 
+    /// <summary>Minimum wait before an automatic retry after a failed sync.</summary>
+    internal static readonly TimeSpan FailureBackoff = TimeSpan.FromMinutes(5);
+
+    /// <summary>Earliest time the next <em>scheduled</em> sync may start (manual syncs are not delayed).</summary>
+    private DateTime _notBefore = DateTime.MinValue;
+
     private readonly Channel<bool> _requests = Channel.CreateBounded<bool>(
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
 
@@ -66,8 +72,14 @@ internal sealed class GmailSyncWorker(
                 return false;
             }
 
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            if (now < _notBefore)
+            {
+                return false;
+            }
+
             var last = connection.LastSyncCompletedAt;
-            return last is null || timeProvider.GetUtcNow().UtcDateTime - last >= TimeSpan.FromMinutes(connection.SyncIntervalMinutes);
+            return last is null || now - last >= TimeSpan.FromMinutes(connection.SyncIntervalMinutes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -79,6 +91,8 @@ internal sealed class GmailSyncWorker(
     private async Task RunOnceAsync(CancellationToken stoppingToken)
     {
         _running = true;
+        // Never re-run immediately, whatever the outcome: a failing sync must not spin.
+        _notBefore = timeProvider.GetUtcNow().UtcDateTime + FailureBackoff;
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();

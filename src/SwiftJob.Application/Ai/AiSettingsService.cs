@@ -86,7 +86,17 @@ public sealed class AiSettingsService(
             throw new AiNotConfiguredException();
         }
 
-        var apiKey = settings.ProtectedApiKey is null ? null : protector.Unprotect(settings.ProtectedApiKey);
+        string? apiKey;
+        try
+        {
+            apiKey = settings.ProtectedApiKey is null ? null : protector.Unprotect(settings.ProtectedApiKey);
+        }
+        catch (System.Security.Cryptography.CryptographicException ex)
+        {
+            throw new ConflictException(
+                "The saved AI API key can no longer be decrypted (encryption keys changed). Enter the key again in Settings → AI model.", ex);
+        }
+
         return new AiConnectionConfig(settings.Provider, settings.Model!, apiKey, settings.Endpoint);
     }
 
